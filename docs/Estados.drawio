@@ -1,0 +1,63 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="EOF received" id="I14oomgi1MpfmWbxXHxM">
+    <mxGraphModel dx="1414" dy="765" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="RJlpumGCj_fZixJvoVFE-1" parent="1" style="ellipse;html=1;shape=startState;fillColor=#000000;strokeColor=#ff0000;rounded=1;shadow=0;comic=0;labelBackgroundColor=none;fontFamily=Verdana;fontSize=12;fontColor=#000000;align=center;direction=south;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="80" y="265" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-2" edge="1" parent="1" source="RJlpumGCj_fZixJvoVFE-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="RJlpumGCj_fZixJvoVFE-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-3" connectable="0" parent="RJlpumGCj_fZixJvoVFE-2" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" value="&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;&amp;nbsp;event&lt;/b&gt;: close attempt&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;&amp;nbsp;condition&lt;/b&gt;: all articles received and processed&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;&amp;nbsp;action&lt;/b&gt;: claim_for_close()&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.12" y="2" as="geometry">
+            <mxPoint x="-204" y="2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=24;fillColor=light-dark(#ffffff, #1a1a00);strokeColor=light-dark(#000000, #ff9090);shadow=0;comic=0;labelBackgroundColor=none;fontFamily=Verdana;fontSize=15;fontColor=#000000;align=center;fontStyle=1" value="WAITING" vertex="1">
+          <mxGeometry height="60" width="120" x="280" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-5" edge="1" parent="1" source="RJlpumGCj_fZixJvoVFE-7" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;labelBackgroundColor=none;endArrow=classic;strokeColor=light-dark(#000000, #ff9090);fontFamily=Verdana;fontSize=12;align=left;entryDx=0;entryDy=0;endFill=1;rounded=0;curved=0;exitDx=0;exitDy=0;" target="RJlpumGCj_fZixJvoVFE-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-6" connectable="0" parent="RJlpumGCj_fZixJvoVFE-5" style="edgeLabel;html=1;align=left;verticalAlign=middle;resizable=0;points=[];" value="&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;&amp;nbsp;event&lt;/b&gt;: close completed&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;&amp;nbsp;condition&lt;/b&gt;: release and next-stage notification completed&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;&amp;nbsp;action&lt;/b&gt;: mark_closed()&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.2845" y="-1" as="geometry">
+            <mxPoint x="-267" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=24;fillColor=light-dark(#ffffff, #1a1a00);strokeColor=light-dark(#000000, #ff9090);shadow=0;comic=0;labelBackgroundColor=none;fontFamily=Verdana;fontSize=15;fontColor=#000000;align=center;fontStyle=1" value="CLOSING" vertex="1">
+          <mxGeometry height="60" width="120" x="999" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-8" edge="1" parent="1" source="RJlpumGCj_fZixJvoVFE-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="RJlpumGCj_fZixJvoVFE-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=24;fillColor=light-dark(#ffffff, #1a1a00);strokeColor=light-dark(#000000, #ff9090);shadow=0;comic=0;labelBackgroundColor=none;fontFamily=Verdana;fontSize=15;fontColor=#000000;align=center;fontStyle=1" value="CLOSED" vertex="1">
+          <mxGeometry height="60" width="120" x="490" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-10" edge="1" parent="1" source="RJlpumGCj_fZixJvoVFE-1" style="edgeStyle=orthogonalEdgeStyle;html=1;labelBackgroundColor=none;endArrow=open;strokeColor=light-dark(#000000, #ff9090);fontFamily=Verdana;fontSize=12;align=left;" target="RJlpumGCj_fZixJvoVFE-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-11" connectable="0" parent="RJlpumGCj_fZixJvoVFE-10" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="&lt;span style=&quot;font-size: 15px;&quot;&gt;&amp;nbsp;Stage EOF&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;received&amp;nbsp;&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.08" y="1" as="geometry">
+            <mxPoint x="-21" y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-12" edge="1" parent="1" source="RJlpumGCj_fZixJvoVFE-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" target="RJlpumGCj_fZixJvoVFE-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="170" />
+              <mxPoint x="310" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-13" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;rounded=0;" value="&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;event&lt;/b&gt;: articles received&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;condition&lt;/b&gt;: articles still missing&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 15px;&quot;&gt;&lt;b&gt;action&lt;/b&gt;: send EOF_ARTICLES_REQUEST&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="30" width="450" x="200" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="RJlpumGCj_fZixJvoVFE-14" parent="1" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#ff0000;" value="" vertex="1">
+          <mxGeometry height="30" width="30" x="535" y="570" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
