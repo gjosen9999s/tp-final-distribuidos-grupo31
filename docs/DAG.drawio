@@ -1,177 +1,127 @@
 <mxfile host="app.diagrams.net">
   <diagram name="DAG" id="dag-tp-wikipedia">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+    <mxGraphModel dx="1455" dy="894" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <mxCell id="title" value="DAG de procesamiento — Wikipedia Article Analysis" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="40" y="-40" width="600" height="30" as="geometry" />
+        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=15;fontStyle=1;" value="DAG de procesamiento — Wikipedia Article Analysis" vertex="1">
+          <mxGeometry height="26" width="600" x="23.5" as="geometry" />
         </mxCell>
-        <mxCell id="legend" value="Rectángulo = operación (map/filter/reduce/join)   ·   Rombo = particionado/decisión   ·   Verde = resultado   ·   Aristas = flujo/dependencia de datos" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="40" y="-12" width="1000" height="20" as="geometry" />
+        <mxCell id="legend" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" value="Círculo = operación · Rombo = particionado · Verde = resultado · Aristas = datos que viajan" vertex="1">
+          <mxGeometry height="18" width="1100" x="23.5" y="20" as="geometry" />
         </mxCell>
-
-        <mxCell id="SRC" value="Cliente lee .parquet" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="40" y="300" width="120" height="50" as="geometry" />
+        <mxCell id="GW" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fontStyle=1;fillColor=#b1ddf0;strokeColor=#10739e;" value="GATEWAY" vertex="1">
+          <mxGeometry height="82" width="87" x="13" y="372" as="geometry" />
         </mxCell>
-        <mxCell id="GW" value="Gateway: etiquetar + repartir" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="200" y="295" width="130" height="60" as="geometry" />
+        <mxCell id="F1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q1 Controller&lt;/b&gt;&lt;div&gt;EN &amp;amp; ≤2020&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="87" x="275" y="51" as="geometry" />
         </mxCell>
-
-        <mxCell id="F1" value="Filter: EN &amp; &lt;=2020" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="380" y="40" width="150" height="42" as="geometry" />
+        <mxCell id="R1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#d5e8d4;strokeColor=#82b366;" value="Resultado Q1" vertex="1">
+          <mxGeometry height="82" width="87" x="1070" y="59" as="geometry" />
         </mxCell>
-        <mxCell id="R1" value="Resultado Q1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="1220" y="40" width="130" height="40" as="geometry" />
+        <mxCell id="F2" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q2_Filter&amp;nbsp;&lt;/b&gt;&lt;div&gt;≤2020 &amp;amp; contiene Biographie/Biography&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="87" x="275" y="230" as="geometry" />
         </mxCell>
-
-        <mxCell id="F2" value="Filter: &lt;=2020 &amp; sección bio" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="380" y="150" width="150" height="42" as="geometry" />
+        <mxCell id="IMG" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Image Downloader&lt;/b&gt;" vertex="1">
+          <mxGeometry height="90" width="87" x="530" y="231" as="geometry" />
         </mxCell>
-        <mxCell id="IMG" value="Fetch imagen (bytes)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="590" y="150" width="150" height="42" as="geometry" />
+        <mxCell id="R2" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#d5e8d4;strokeColor=#82b366;" value="Resultado Q2" vertex="1">
+          <mxGeometry height="82" width="87" x="1070" y="230" as="geometry" />
         </mxCell>
-        <mxCell id="R2" value="Resultado Q2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="1220" y="150" width="130" height="40" as="geometry" />
+        <mxCell id="WIKI" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fontSize=9;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Wikimedia Commons" vertex="1">
+          <mxGeometry height="76" width="120" x="670" y="120" as="geometry" />
         </mxCell>
-
-        <mxCell id="TOK" value="Tokenizar abstract" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="380" y="270" width="150" height="42" as="geometry" />
+        <mxCell id="TOK" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Tokenizer&lt;/b&gt;" vertex="1">
+          <mxGeometry height="90" width="87" x="275" y="366" as="geometry" />
         </mxCell>
-        <mxCell id="HASH" value="hash(word) % M" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="585" y="298" width="130" height="60" as="geometry" />
+        <mxCell id="HASH" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=8;" value="hash(word) % M" vertex="1">
+          <mxGeometry height="64" width="87" x="410" y="379" as="geometry" />
         </mxCell>
-        <mxCell id="RED" value="Q3 Reduce: flags EN/FR" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="800" y="270" width="150" height="42" as="geometry" />
+        <mxCell id="RED" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q3 Reduce&lt;/b&gt;&amp;nbsp;&lt;div&gt;flags EN/FR&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="87" x="640" y="366" as="geometry" />
         </mxCell>
-        <mxCell id="INT" value="Intersección EN ∩ FR" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1010" y="270" width="150" height="42" as="geometry" />
+        <mxCell id="INT" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q3 Join&lt;/b&gt;&lt;div&gt;&amp;nbsp;EN ∩ FR&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="87" x="840" y="364" as="geometry" />
         </mxCell>
-        <mxCell id="R3" value="Resultado Q3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="1220" y="270" width="130" height="40" as="geometry" />
+        <mxCell id="R3" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#d5e8d4;strokeColor=#82b366;" value="Resultado Q3" vertex="1">
+          <mxGeometry height="82" width="87" x="1070" y="364" as="geometry" />
         </mxCell>
-
-        <mxCell id="CNT" value="Q4 Counter: conteo" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="800" y="400" width="150" height="42" as="geometry" />
+        <mxCell id="CNT" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q4 Counter&amp;nbsp;&lt;/b&gt;&lt;div&gt;conteo por palabra&lt;/div&gt;" vertex="1">
+          <mxGeometry height="92" width="93.25" x="523.75" y="480" as="geometry" />
         </mxCell>
-        <mxCell id="TOP" value="Merge top 20" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1010" y="400" width="150" height="42" as="geometry" />
+        <mxCell id="TOP" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q4 Join&amp;nbsp;&lt;/b&gt;&lt;div&gt;merge top 20&lt;/div&gt;" vertex="1">
+          <mxGeometry height="92" width="87" x="805" y="480" as="geometry" />
         </mxCell>
-        <mxCell id="R4" value="Resultado Q4" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="1220" y="400" width="130" height="40" as="geometry" />
+        <mxCell id="R4" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#d5e8d4;strokeColor=#82b366;" value="Resultado Q4" vertex="1">
+          <mxGeometry height="82" width="87" x="1080" y="480" as="geometry" />
         </mxCell>
-
-        <mxCell id="WC" value="wordCount = len(extract)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="380" y="540" width="150" height="42" as="geometry" />
+        <mxCell id="WC" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q5 Counter&amp;nbsp;&lt;/b&gt;&lt;div&gt;wordCount (map)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="92" width="93.25" x="271.88" y="572" as="geometry" />
         </mxCell>
-        <mxCell id="AVG" value="Promedio (sum/count)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="590" y="490" width="150" height="42" as="geometry" />
+        <mxCell id="ACC" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q5 Accumulator&lt;/b&gt;&lt;br/&gt;sum/count parcial" vertex="1">
+          <mxGeometry height="76" width="80" x="460" y="708" as="geometry" />
         </mxCell>
-        <mxCell id="SPILL" value="Spill a disco" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="590" y="610" width="150" height="42" as="geometry" />
+        <mxCell id="AF" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q5 Average+Filter&lt;/b&gt;&amp;nbsp;" vertex="1">
+          <mxGeometry height="90" width="87" x="650" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="BCAST" value="Broadcast del promedio" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="800" y="490" width="150" height="42" as="geometry" />
+        <mxCell id="R5" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#d5e8d4;strokeColor=#82b366;" value="Resultado Q5" vertex="1">
+          <mxGeometry height="82" width="87" x="1080" y="614" as="geometry" />
         </mxCell>
-        <mxCell id="FLT" value="Filter: wordCount &gt; avg" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1010" y="540" width="150" height="42" as="geometry" />
-        </mxCell>
-        <mxCell id="R5" value="Resultado Q5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="1220" y="540" width="130" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="EG" value="Gateway egress" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1440" y="295" width="130" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="SINK" value="Cliente (respuestas)" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1640" y="300" width="130" height="50" as="geometry" />
-        </mxCell>
-
-        <mxCell id="e-src-gw" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="SRC" target="GW">
+        <mxCell id="e0" edge="1" parent="1" source="IMG" style="startArrow=classic;endArrow=classic;html=1;rounded=0;fontSize=8;" target="WIKI" value="GET imagen (bytes)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="e-gw-f1" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="GW" target="F1" value="meta">
+        <mxCell id="e1" edge="1" parent="1" source="GW" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="F1" value="&amp;lt;clientID, docID, in_language, date_modified, url&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-gw-f2" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="GW" target="F2" value="sections">
+        <mxCell id="e2" edge="1" parent="1" source="GW" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="F2" value="&amp;lt;clientID, docID, date_modified, sections, name, url, image&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-gw-tok" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="GW" target="TOK" value="abstract">
+        <mxCell id="e3" edge="1" parent="1" source="GW" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="TOK" value="&amp;lt;clientID, docID, abstract, in_language&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-gw-wc" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="GW" target="WC" value="abstract">
+        <mxCell id="e4" edge="1" parent="1" source="GW" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="WC" value="&amp;lt;clientID, docID, url, date_modified, abstract&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="e-f1-r1" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="F1" target="R1">
+        <mxCell id="e5" edge="1" parent="1" source="F1" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="R1" value="&amp;lt;resultType, clientID, docID, url, date_modified&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-f2-img" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="F2" target="IMG">
+        <mxCell id="e6" edge="1" parent="1" source="F2" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="IMG" value="&amp;lt;clientID, docID, name, url, image&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-img-r2" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="IMG" target="R2">
+        <mxCell id="e7" edge="1" parent="1" source="IMG" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="R2" value="&amp;lt;resultType, clientID, docID, name, url, image_bytes&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="e-tok-hash" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="TOK" target="HASH">
+        <mxCell id="e8" edge="1" parent="1" source="TOK" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="HASH" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-hash-red" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="HASH" target="RED">
+        <mxCell id="e9" edge="1" parent="1" source="HASH" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="RED" value="&amp;lt;clientID, word, in_language&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-hash-cnt" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="HASH" target="CNT">
+        <mxCell id="e10" edge="1" parent="1" source="HASH" style="endArrow=classic;html=1;rounded=0;fontSize=8;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="CNT" value="&amp;lt;clientID, docID, word&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-red-int" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="RED" target="INT">
+        <mxCell id="e11" edge="1" parent="1" source="RED" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="INT" value="&amp;lt;clientID, [words]&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-int-r3" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="INT" target="R3">
+        <mxCell id="e12" edge="1" parent="1" source="INT" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="R3" value="&amp;lt;resultType, clientID, [words]&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-cnt-top" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="CNT" target="TOP">
+        <mxCell id="e13" edge="1" parent="1" source="CNT" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="TOP" value="&amp;lt;clientID, partial:[word, count]&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-top-r4" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="TOP" target="R4">
+        <mxCell id="e14" edge="1" parent="1" source="TOP" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="R4" value="&amp;lt;resultType, top20:[word, count]&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <mxCell id="e-wc-avg" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="WC" target="AVG" value="&lt;=2020">
+        <mxCell id="e15" edge="1" parent="1" source="WC" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="ACC" value="&amp;lt;clientID, wordCount&amp;gt; (≤2020)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-wc-spill" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="WC" target="SPILL" value="&gt;=2021">
+        <mxCell id="e16" edge="1" parent="1" source="WC" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="AF" value="&amp;lt;clientId, docId, url, wordCount&amp;gt; (≥2021)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-avg-bcast" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="AVG" target="BCAST">
+        <mxCell id="e17" edge="1" parent="1" source="ACC" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="AF" value="&amp;lt;clientId, sum, count&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e-bcast-flt" style="endArrow=classic;html=1;rounded=0;dashed=1;strokeColor=#b85450;" edge="1" parent="1" source="BCAST" target="FLT" value="avg">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-spill-flt" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="SPILL" target="FLT">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-flt-r5" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="FLT" target="R5">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="e-r1-eg" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="R1" target="EG">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-r2-eg" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="R2" target="EG">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-r3-eg" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="R3" target="EG">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-r4-eg" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="R4" target="EG">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-r5-eg" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="R5" target="EG">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-eg-sink" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="EG" target="SINK">
+        <mxCell id="e18" edge="1" parent="1" source="AF" style="endArrow=classic;html=1;rounded=0;fontSize=8;" target="R5" value="&amp;lt;resultType, clientID, url, wordCount&amp;gt;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
