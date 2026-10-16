@@ -1,0 +1,172 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Seq" id="seq">
+    <mxGraphModel dx="1879" dy="573" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="620" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" value="Manejo EOF - Caso: Streaming stateless - Ej: Q1 Controller / Q2_Filter" vertex="1">
+          <mxGeometry height="20" width="840" x="20" as="geometry" />
+        </mxCell>
+        <mxCell id="h0" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=9;fontStyle=1;" value="Cola de entrada" vertex="1">
+          <mxGeometry height="26" width="124" x="-7" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="l0" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="55" y="72" as="sourcePoint" />
+            <mxPoint x="55" y="585" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;fontStyle=1;" value="Filtro 1" vertex="1">
+          <mxGeometry height="26" width="124" x="123" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="72" as="sourcePoint" />
+            <mxPoint x="185" y="585" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;fontStyle=1;" value="Filtro N" vertex="1">
+          <mxGeometry height="26" width="124" x="258" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="72" as="sourcePoint" />
+            <mxPoint x="320" y="585" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=1;" value="⏱ Timer" vertex="1">
+          <mxGeometry height="26" width="124" x="388" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="72" as="sourcePoint" />
+            <mxPoint x="450" y="585" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" value="Cola de control" vertex="1">
+          <mxGeometry height="26" width="124" x="528" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="72" as="sourcePoint" />
+            <mxPoint x="590" y="585" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=9;fontStyle=1;" value="Cola de salida" vertex="1">
+          <mxGeometry height="26" width="124" x="678" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="72" as="sourcePoint" />
+            <mxPoint x="740" y="585" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="loopbox" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;dashed=1;verticalAlign=top;align=left;fontSize=9;fontColor=#b85450;strokeColor=#b85450;" value="loop  cada T ms" vertex="1">
+          <mxGeometry height="154" width="540" x="150" y="256" as="geometry" />
+        </mxCell>
+        <mxCell id="m_0_1_96" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#333333;" value="artículo">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="55" y="96" as="sourcePoint" />
+            <mxPoint x="185" y="96" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_1_5_112" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#82b366;" value="(si cumple) emite resultado">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="112" as="sourcePoint" />
+            <mxPoint x="740" y="112" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_0_2_134" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#333333;" value="artículo">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="55" y="134" as="sourcePoint" />
+            <mxPoint x="320" y="134" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_2_5_150" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#82b366;" value="(si cumple) emite resultado">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="150" as="sourcePoint" />
+            <mxPoint x="740" y="150" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_0_1_174" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#b85450;" value="EOF{total artículos}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="55" y="174" as="sourcePoint" />
+            <mxPoint x="185" y="174" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_1_4_198" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#b85450;" value="republica EOF">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="198" as="sourcePoint" />
+            <mxPoint x="590" y="198" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_4_1_218" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#6c8ebf;dashed=1;" value="EOF (broadcast)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="218" as="sourcePoint" />
+            <mxPoint x="185" y="218" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_4_2_238" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#6c8ebf;dashed=1;" value="EOF (broadcast)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="238" as="sourcePoint" />
+            <mxPoint x="320" y="238" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_3_1_282" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#d79b00;" value="evento (cada T ms)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="282" as="sourcePoint" />
+            <mxPoint x="185" y="282" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_1_4_302" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#10739e;" value="PROGRESS{+delta}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="302" as="sourcePoint" />
+            <mxPoint x="590" y="302" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_3_2_322" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#d79b00;" value="evento (cada T ms)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="322" as="sourcePoint" />
+            <mxPoint x="320" y="322" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_2_4_342" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#10739e;" value="PROGRESS{+delta}">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="342" as="sourcePoint" />
+            <mxPoint x="590" y="342" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_4_1_362" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#6c8ebf;dashed=1;" value="PROGRESS (broadcast)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="362" as="sourcePoint" />
+            <mxPoint x="185" y="362" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_4_2_382" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#6c8ebf;dashed=1;" value="PROGRESS (broadcast)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="590" y="382" as="sourcePoint" />
+            <mxPoint x="320" y="382" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_1_5_438" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#82b366;dashed=1;" value="DONE (al cerrar)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="438" as="sourcePoint" />
+            <mxPoint x="740" y="438" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m_2_5_458" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#82b366;dashed=1;" value="DONE (al cerrar)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="458" as="sourcePoint" />
+            <mxPoint x="740" y="458" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="close" parent="1" style="text;html=1;align=left;fontSize=9;fontStyle=1;" value="group: Σ deltas (por cliente) -&gt; Σ == total -&gt; cierra" vertex="1">
+          <mxGeometry height="16" width="660" x="120" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;size=11;align=left;verticalAlign=top;fontSize=9;fillColor=#fff2cc;strokeColor=#d6b656;" value="Los filtros streamean a la salida.&amp;nbsp;&amp;nbsp;&lt;div&gt;Una replica filtro recibe mensaje EOF con la cantidad total de articulos enviado por el cliente en cuestión.&amp;nbsp;&amp;nbsp;&lt;/div&gt;&lt;div&gt;El EOF se republica por la cola de control al resto de las réplicas.&lt;br&gt;&lt;div&gt;Cada T ms, todos las replicas emiten mensajes PROGRESS con el estado de procesamiento actual (cantidad por cliente).&amp;nbsp;&lt;/div&gt;&lt;div&gt;Al recibir un mensaje PROGRESS convalidan si se ha finalizado la ejecucion&amp;nbsp;&lt;span style=&quot;font-weight: 700; white-space: nowrap; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Σ progreso acumulado = total esperado (del EOF inicial)&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;b&gt;De cumplirse la condicion de cierre, se emite por cada replica el mensaje DONE al siguiente nivel, usando la cola de datos.&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="100" width="860" x="20" y="500" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
