@@ -1,16 +1,13 @@
 <mxfile host="app.diagrams.net">
   <diagram name="DAG" id="dag-tp-wikipedia">
-    <mxGraphModel dx="1455" dy="894" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+    <mxGraphModel dx="1029" dy="573" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=15;fontStyle=1;" value="DAG de procesamiento — Wikipedia Article Analysis" vertex="1">
           <mxGeometry height="26" width="600" x="23.5" as="geometry" />
         </mxCell>
-        <mxCell id="legend" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" value="Círculo = operación · Rombo = particionado · Verde = resultado · Aristas = datos que viajan" vertex="1">
-          <mxGeometry height="18" width="1100" x="23.5" y="20" as="geometry" />
-        </mxCell>
-        <mxCell id="GW" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fontStyle=1;fillColor=#b1ddf0;strokeColor=#10739e;" value="GATEWAY" vertex="1">
+        <mxCell id="GW" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fontStyle=1;fillColor=#b1ddf0;strokeColor=#10739e;" value="ArticleHandler" vertex="1">
           <mxGeometry height="82" width="87" x="13" y="372" as="geometry" />
         </mxCell>
         <mxCell id="F1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=8;fillColor=#b1ddf0;strokeColor=#10739e;" value="&lt;b&gt;Q1 Controller&lt;/b&gt;&lt;div&gt;EN &amp;amp; ≤2020&lt;/div&gt;" vertex="1">

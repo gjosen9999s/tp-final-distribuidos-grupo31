@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Seq" id="seq">
-    <mxGraphModel dx="1879" dy="573" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="620" math="0" shadow="0">
+    <mxGraphModel dx="2088" dy="690" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="620" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -16,7 +16,7 @@
             <mxPoint x="55" y="585" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="h1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;fontStyle=1;" value="Filtro 1" vertex="1">
+        <mxCell id="h1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;fontStyle=1;" value="Controller 1" vertex="1">
           <mxGeometry height="26" width="124" x="123" y="46" as="geometry" />
         </mxCell>
         <mxCell id="l1" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
@@ -25,7 +25,7 @@
             <mxPoint x="185" y="585" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="h2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;fontStyle=1;" value="Filtro N" vertex="1">
+        <mxCell id="h2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=9;fontStyle=1;" value="Controller N" vertex="1">
           <mxGeometry height="26" width="124" x="258" y="46" as="geometry" />
         </mxCell>
         <mxCell id="l2" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#999999;dashed=1;dashPattern=5 4;" value="">
@@ -118,7 +118,7 @@
             <mxPoint x="185" y="282" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="m_1_4_302" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#10739e;" value="PROGRESS{+delta}">
+        <mxCell id="m_1_4_302" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#10739e;" value="PROGRESS{ClientId, NodeId, Qty}">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="185" y="302" as="sourcePoint" />
             <mxPoint x="590" y="302" as="targetPoint" />
@@ -130,7 +130,7 @@
             <mxPoint x="320" y="322" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="m_2_4_342" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#10739e;" value="PROGRESS{+delta}">
+        <mxCell id="m_2_4_342" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;fontSize=9;strokeColor=#10739e;" value="PROGRESS{ClientId, NodeId, Qty}">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="320" y="342" as="sourcePoint" />
             <mxPoint x="590" y="342" as="targetPoint" />
@@ -160,11 +160,11 @@
             <mxPoint x="740" y="458" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="close" parent="1" style="text;html=1;align=left;fontSize=9;fontStyle=1;" value="group: Σ deltas (por cliente) -&gt; Σ == total -&gt; cierra" vertex="1">
+        <mxCell id="close" parent="1" style="text;html=1;align=left;fontSize=9;fontStyle=1;" value="group: Σ progress (para todo cliente) -&amp;gt; Σ == total -&amp;gt; cierra" vertex="1">
           <mxGeometry height="16" width="660" x="120" y="470" as="geometry" />
         </mxCell>
         <mxCell id="note" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;size=11;align=left;verticalAlign=top;fontSize=9;fillColor=#fff2cc;strokeColor=#d6b656;" value="Los filtros streamean a la salida.&amp;nbsp;&amp;nbsp;&lt;div&gt;Una replica filtro recibe mensaje EOF con la cantidad total de articulos enviado por el cliente en cuestión.&amp;nbsp;&amp;nbsp;&lt;/div&gt;&lt;div&gt;El EOF se republica por la cola de control al resto de las réplicas.&lt;br&gt;&lt;div&gt;Cada T ms, todos las replicas emiten mensajes PROGRESS con el estado de procesamiento actual (cantidad por cliente).&amp;nbsp;&lt;/div&gt;&lt;div&gt;Al recibir un mensaje PROGRESS convalidan si se ha finalizado la ejecucion&amp;nbsp;&lt;span style=&quot;font-weight: 700; white-space: nowrap; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Σ progreso acumulado = total esperado (del EOF inicial)&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;text-wrap-mode: nowrap;&quot;&gt;&lt;b&gt;De cumplirse la condicion de cierre, se emite por cada replica el mensaje DONE al siguiente nivel, usando la cola de datos.&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;" vertex="1">
-          <mxGeometry height="100" width="860" x="20" y="500" as="geometry" />
+          <mxGeometry height="100" width="760" x="20" y="500" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
