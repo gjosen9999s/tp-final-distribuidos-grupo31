@@ -1,0 +1,1 @@
+"""Consume la logs queue."""
