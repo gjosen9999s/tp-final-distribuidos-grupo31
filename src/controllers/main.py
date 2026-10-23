@@ -54,7 +54,7 @@ def build(controller_type):
         out_mw=out_mw,
         control_mw=control_mw,
         node_id=os.getenv("NODE_ID") or socket.gethostname(),
-        progress_k=int(os.getenv("PROGRESS_K", "100")),
+        progress_batch_size=int(os.getenv("PROGRESS_BATCH_SIZE", "100")),
     )
 
 

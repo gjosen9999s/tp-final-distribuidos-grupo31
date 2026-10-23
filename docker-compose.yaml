@@ -1,0 +1,108 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  article_handler:
+    build: .
+    container_name: article_handler
+    command: ["python", "-m", "article_handler.main"]
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "5678"
+      MOM_HOST: rabbitmq
+      RESULTS_QUEUE: QueryResults
+      LOGS_QUEUE: logs
+    ports:
+      - "5678:5678"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',5678),2); s.close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  q1_0:
+    build: .
+    container_name: q1_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q1_controller
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q1_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q1
+      PROGRESS_BATCH_SIZE: "100"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q1_1:
+    build: .
+    container_name: q1_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q1_controller
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q1_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q1
+      PROGRESS_BATCH_SIZE: "100"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q1_2:
+    build: .
+    container_name: q1_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q1_controller
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q1_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q1
+      PROGRESS_BATCH_SIZE: "100"
+      NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  log_controller:
+    build: .
+    container_name: log_controller
+    command: ["python", "-m", "log_controller.main"]
+    environment:
+      MOM_HOST: rabbitmq
+      LOGS_QUEUE: logs
+      LOG_DIR: /logs
+    volumes:
+      - ./logs:/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  client_1:
+    build: .
+    container_name: client_1
+    command: ["python", "-m", "client.main", "--input", "/data/input_1.parquet", "--host", "article_handler", "--port", "5678"]
+    volumes:
+      - ./data:/data
+      - ./output:/output
+    depends_on:
+      article_handler:
+        condition: service_healthy
