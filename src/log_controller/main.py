@@ -3,18 +3,18 @@ import os
 import signal
 import sys
 
-from common.middleware.middleware_rabbitmq import RabbitMQMiddleware
+from common.middleware.middleware_rabbitmq import MessageMiddlewareQueueRabbitMQ
 from log_controller.log_consumer import LogConsumer
 from log_controller.log_persister import LogPersister
 
 
 def main():
-    middleware = RabbitMQMiddleware(
-        host=os.getenv("MOM_HOST", "localhost"),
-        port=int(os.getenv("MOM_PORT", "5672")),
+    mom_host = os.getenv("MOM_HOST", "localhost")
+    logs = MessageMiddlewareQueueRabbitMQ(
+        mom_host, os.getenv("LOGS_QUEUE", "logs")
     )
     persister = LogPersister(os.getenv("LOG_DIR", "/logs"))
-    consumer = LogConsumer(middleware, persister, queue=os.getenv("LOGS_QUEUE", "logs"))
+    consumer = LogConsumer(logs, persister)
 
     def on_signal(signum, frame):
         consumer.stop()
@@ -25,7 +25,7 @@ def main():
     try:
         consumer.run()
     finally:
-        middleware.close()
+        logs.close()
     return 0
 
 

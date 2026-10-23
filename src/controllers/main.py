@@ -2,7 +2,13 @@
 import importlib
 import os
 import signal
+import socket
 import sys
+
+from common.middleware.middleware_rabbitmq import (
+    MessageMiddlewareExchangeRabbitMQ,
+    MessageMiddlewareQueueRabbitMQ,
+)
 
 REGISTRY = {
     "q1_controller": ("controllers.q1_controller", "Q1Controller"),
@@ -24,12 +30,30 @@ def build(controller_type):
         module_name, class_name = REGISTRY[controller_type]
     except KeyError:
         raise SystemExit(f"CONTROLLER_TYPE inválido: {controller_type!r}")
+
     module = importlib.import_module(module_name)
     controller_class = getattr(module, class_name)
+
+    mom_host = os.getenv("MOM_HOST", "localhost")
+    in_queue = os.getenv("IN_QUEUE")
+    out_queue = os.getenv("OUT_QUEUE")
+    control_exchange = os.getenv("CONTROL_EXCHANGE")
+    control_key = os.getenv("CONTROL_KEY")
+
+    in_mw = MessageMiddlewareQueueRabbitMQ(mom_host, in_queue) if in_queue else None
+    out_mw = MessageMiddlewareQueueRabbitMQ(mom_host, out_queue) if out_queue else None
+    control_mw = (
+        MessageMiddlewareExchangeRabbitMQ(mom_host, control_exchange, [control_key])
+        if control_exchange and control_key
+        else None
+    )
+
     return controller_class(
         controller_type=controller_type,
-        in_queue=os.getenv("IN_QUEUE"),
-        out_queue=os.getenv("OUT_QUEUE"),
+        in_mw=in_mw,
+        out_mw=out_mw,
+        control_mw=control_mw,
+        node_id=os.getenv("NODE_ID") or socket.gethostname(),
         progress_k=int(os.getenv("PROGRESS_K", "100")),
     )
 
