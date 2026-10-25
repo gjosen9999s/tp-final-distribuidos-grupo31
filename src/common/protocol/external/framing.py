@@ -35,6 +35,16 @@ def send_message(sock: socket.socket, payload: bytes) -> None:
     send_all(sock, serializer.serialize_uint32(len(payload)) + payload)
 
 
-def recv_message(sock: socket.socket) -> bytes:
+def recv_message(sock: socket.socket, max_frame=None) -> bytes:
     size = serializer.deserialize_uint32(recv_all(sock, UINT32_SIZE))
+    if max_frame is not None and size > max_frame:
+        raise ValueError(f"frame demasiado grande: {size}")
     return recv_all(sock, size)
+
+
+def send_ack(sock: socket.socket) -> None:
+    send_message(sock, b"")
+
+
+def is_ack(payload: bytes) -> bool:
+    return len(payload) == 0
