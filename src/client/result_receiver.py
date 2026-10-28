@@ -6,6 +6,7 @@ Implementa procesamiento de latidos (heartbeats) para mantener viva la sesión d
 import logging
 import socket
 from typing import Any, Dict
+from common.protocol.constants import ExternalType, FLAG_IS_SESSION_END
 from common.protocol.external import framing, serializer
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class ResultReceiver:
         """
         Bucle de red bloqueante.
         Lee secuencialmente los frames TCP, gestiona los latidos para evitar timeouts en 
-        largas esperas, y evalúa la condición de corte (EOF o Error del clúster).
+        largas esperas, y evalúa la condición de corte (isSessionEnd o Error del clúster).
         """
         logger.info("Esperando resultados del clúster distribuido...")
 
@@ -64,17 +65,16 @@ class ResultReceiver:
                     raise RuntimeError("Corrupción en el protocolo binario de recepción.") from e
 
                 # Enrutamiento de la respuesta
-                if msg_type == "result":
+                if msg_type == ExternalType.RESULT:
                     self._process_result(data)
-                
-                elif msg_type == "eof":
-                    logger.info(
-                        f"Señal de fin de procesamiento recibida del clúster. "
-                        f"Total de resultados recolectados con éxito: {self._results_received}."
-                    )
-                    break
-                
-                elif msg_type == "error":
+                    if data["flags"] & FLAG_IS_SESSION_END:
+                        logger.info(
+                            f"Señal de fin de sesión recibida del clúster. "
+                            f"Total de resultados recolectados con éxito: {self._results_received}."
+                        )
+                        break
+
+                elif msg_type == ExternalType.ERROR:
                     error_code = data.get("code", "UNKNOWN")
                     error_msg = data.get("message", "Sin descripción")
                     logger.error(f"El clúster abortó el procesamiento con un ERROR [{error_code}]: {error_msg}")

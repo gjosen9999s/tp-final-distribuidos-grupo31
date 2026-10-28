@@ -7,7 +7,12 @@ import socket
 import sys
 import time
 
-# Asumiendo que tienes acceso a estos módulos
+from common.protocol.constants import (
+    ExternalType,
+    FLAG_IS_LAST_PART,
+    FLAG_IS_SESSION_END,
+    ResultType,
+)
 from common.protocol.external import framing, serializer
 
 logging.basicConfig(level=logging.INFO, format="[GATEWAY] %(message)s")
@@ -40,7 +45,7 @@ def run_dummy_gateway(host: str = "127.0.0.1", port: int = 8080):
                     time.sleep(0.1) 
                     framing.send_ack(client_sock)
                     
-                    if msg_type == "eof":
+                    if msg_type == ExternalType.EOF:
                         logging.info("EOF del cliente recibido. Terminando ingesta.")
                         break
 
@@ -55,18 +60,16 @@ def run_dummy_gateway(host: str = "127.0.0.1", port: int = 8080):
                 # 3. FASE DE DEVOLUCIÓN DE RESULTADOS
                 logging.info("Enviando resultados al cliente...")
                 
-                # Cambiamos result_type="count" por result_type=1 (un entero válido)
                 result_payload = serializer.serialize_result(
-                    result_type=1, 
-                    doc_id=1, 
-                    part_id=1, 
-                    payload=b"100",
-                    flags=0
+                    result_type=ResultType.Q1,
+                    doc_id=1,
+                    part_id=1,
+                    flags=FLAG_IS_LAST_PART | FLAG_IS_SESSION_END,
+                    payload=serializer.serialize_q1_payload(
+                        "https://en.wikipedia.org/wiki/Dummy", 1577836800
+                    ),
                 )
                 framing.send_message(client_sock, result_payload)
-                
-                eof_payload = serializer.serialize_eof(total_articles=25000, total_batches=3)
-                framing.send_message(client_sock, eof_payload)
                 logging.info("Sesión completada y cerrada limpiamente.")
 
             except Exception as e:

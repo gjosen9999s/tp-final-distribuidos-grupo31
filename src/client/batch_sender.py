@@ -3,12 +3,66 @@ Módulo BatchSender.
 Empaqueta, transforma y envía los lotes al Gateway (ArticleHandler).
 Utiliza una conexión inyectada (Dependency Injection) y aplica un modelo Crash-Only ante fallos.
 """
+import json
 import logging
 import socket
+from datetime import datetime, timezone
 from typing import Any, List
+
+from common.protocol.constants import (
+    LANG_EN,
+    LANG_FR,
+    LANG_OTHER,
+    SECTION_BIOGRAPHIE,
+    SECTION_BIOGRAPHY,
+)
 from common.protocol.external import framing, serializer
 
 logger = logging.getLogger(__name__)
+
+LANG_CODES = {"en": LANG_EN, "fr": LANG_FR}
+
+
+def _iter_section_names(value):
+    if value is None:
+        return
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return
+        try:
+            parsed = json.loads(text)
+        except (ValueError, TypeError):
+            yield text
+            return
+        yield from _iter_section_names(parsed)
+        return
+    if isinstance(value, dict):
+        name = value.get("name")
+        if isinstance(name, str) and name.strip():
+            yield name
+        for key in ("has_parts", "parts"):
+            if key in value:
+                yield from _iter_section_names(value[key])
+                return
+        if "name" not in value:
+            for item in value.values():
+                yield from _iter_section_names(item)
+        return
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _iter_section_names(item)
+
+
+def _sections_flags(value):
+    flags = 0
+    for name in _iter_section_names(value):
+        normalized = name.strip().lower()
+        if normalized == "biography":
+            flags |= SECTION_BIOGRAPHY
+        elif normalized == "biographie":
+            flags |= SECTION_BIOGRAPHIE
+    return flags
 
 
 class _LightweightArticle:
@@ -82,6 +136,7 @@ class BatchSender:
         raw_dates = batch_dict.get("date_modified", [0] * batch_size)
         raw_images = batch_dict.get("image", [None] * batch_size)
         raw_langs = batch_dict.get("in_language", [None] * batch_size)
+        raw_sections = batch_dict.get("sections", [None] * batch_size)
 
         articles: List[_LightweightArticle] = []
         
@@ -92,27 +147,26 @@ class BatchSender:
             img_struct = raw_images[i]
             img_url = img_struct.get("content_url", "") if isinstance(img_struct, dict) else ""
 
-            # Extraer identificador de idioma anidado
+            # Extraer identificador de idioma anidado ("en" / "fr")
             lang_struct = raw_langs[i]
-            lang_str = lang_struct.get("identifier", "0") if isinstance(lang_struct, dict) else "0"
-            try:
-                lang_int = int(lang_str)
-            except (ValueError, TypeError):
-                lang_int = 0
+            if isinstance(lang_struct, dict):
+                lang_key = str(lang_struct.get("identifier", "")).strip().lower()
+            else:
+                lang_key = str(lang_struct).strip().lower() if lang_struct is not None else ""
+            lang_int = LANG_CODES.get(lang_key, LANG_OTHER)
 
-            # Fechas
-            # El Gateway espera un timestamp entero numérico?
+            # Fechas: el parquet trae datetime naive (UTC), no un epoch
             date_val = raw_dates[i]
-            if hasattr(date_val, "timestamp"):
+            if isinstance(date_val, datetime):
+                if date_val.tzinfo is None:
+                    date_val = date_val.replace(tzinfo=timezone.utc)
                 date_int = int(date_val.timestamp())
             elif isinstance(date_val, (int, float)):
                 date_int = int(date_val)
             else:
                 date_int = 0
 
-            # Padding
-            # ¿Que va aca en section flags?
-            sections_flags = 0 
+            sections_flags = _sections_flags(raw_sections[i])
 
             # Empaquetado final
             articles.append(

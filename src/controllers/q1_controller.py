@@ -139,11 +139,12 @@ class Q1Controller(Controller):
 
     @staticmethod
     def _matches(article):
-        # dateModified es epoch, usamos el año.
+        # dateModified es epoch; el año lo saca Article.year.
         # Q1 pide inglés y <= 2020.
         if article.inLanguage != LANG_EN:
             return False
-        if article.dateModified is None or article.url is None:
+        # 0 = fecha faltante (el cliente manda 0 cuando no hay date_modified).
+        if article.dateModified is None or article.dateModified <= 0 or article.url is None:
             return False
         year = article.year
         return year is not None and year <= 2020
