@@ -12,6 +12,7 @@ from ..constants import (
     ART_URL,
     INT_ARTICLE,
     INT_RESULT,
+    InternalType,
 )
 from ..external.serializer import (
     Reader,
@@ -89,11 +90,11 @@ def deserialize(payload):
     reader = Reader(payload)
     msg_type = reader.uint8()
     client_id = reader.uint32()
-    if msg_type == INT_ARTICLE:
-        return "article", client_id, deserialize_article(reader)
-    if msg_type == INT_RESULT:
+    if msg_type == InternalType.ARTICLE:
+        return InternalType.ARTICLE, client_id, deserialize_article(reader)
+    if msg_type == InternalType.RESULT:
         return (
-            "result",
+            InternalType.RESULT,
             client_id,
             {
                 "resultType": reader.uint8(),

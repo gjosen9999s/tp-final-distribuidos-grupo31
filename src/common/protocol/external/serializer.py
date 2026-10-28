@@ -14,6 +14,7 @@ from ..constants import (
     EXT_EOF,
     EXT_ERROR,
     EXT_RESULT,
+    ExternalType,
     UINT8_SIZE,
     UINT16_SIZE,
     UINT32_SIZE,
@@ -200,14 +201,14 @@ def deserialize_error(reader):
 def deserialize_message(payload):
     reader = Reader(payload)
     msg_type = reader.uint8()
-    if msg_type == EXT_BATCH:
-        return "batch", deserialize_batch(reader)
-    if msg_type == EXT_EOF:
-        return "eof", deserialize_eof(reader)
-    if msg_type == EXT_RESULT:
-        return "result", deserialize_result(reader)
-    if msg_type == EXT_ERROR:
-        return "error", deserialize_error(reader)
+    if msg_type == ExternalType.BATCH:
+        return ExternalType.BATCH, deserialize_batch(reader)
+    if msg_type == ExternalType.EOF:
+        return ExternalType.EOF, deserialize_eof(reader)
+    if msg_type == ExternalType.RESULT:
+        return ExternalType.RESULT, deserialize_result(reader)
+    if msg_type == ExternalType.ERROR:
+        return ExternalType.ERROR, deserialize_error(reader)
     raise ValueError(f"tipo externo desconocido: {msg_type}")
 
 

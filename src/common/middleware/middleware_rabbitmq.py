@@ -115,6 +115,20 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         finally:
             self._is_consuming = False
 
+    # En el caso que se pida detener el consumo desde un hilo distinto al que usa el canal.
+    # add_callback_threadsafe encola la orden para que la ejecute el hilo dueño de la conexión.
+    def stop_consuming_threadsafe(self):
+
+        if not self.connection.is_open:
+            return
+
+        try:
+
+            self.connection.add_callback_threadsafe(self.channel.stop_consuming)
+
+        except pika.exceptions.AMQPError as e:
+            _handle_pika_error(e)
+
 	#Envía un mensaje a la cola o al tópico con el que se inicializó el exchange.
 	#Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
 	#Si ocurre un error interno que no puede resolverse eleva MessageMiddlewareMessageError.
@@ -233,6 +247,19 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
 
         finally:
             self._is_consuming = False
+
+    # En el caso que se pida detener el consumo desde un hilo distinto al que usa el canal.
+    # add_callback_threadsafe encola la orden para que la ejecute el hilo dueño de la conexión.
+    def stop_consuming_threadsafe(self):
+
+        if not self.connection.is_open:
+            return
+
+        try:
+            self.connection.add_callback_threadsafe(self.channel.stop_consuming)
+        
+        except pika.exceptions.AMQPError as e:
+            _handle_pika_error(e)
         
     #Envía un mensaje a la cola o al tópico con el que se inicializó el exchange.
     #Si se pierde la conexión con el middleware eleva MessageMiddlewareDisconnectedError.
