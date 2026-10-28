@@ -20,3 +20,8 @@ q1-test:
 	docker compose -f tests/docker-compose.q1-test.yaml up --build --abort-on-container-exit --exit-code-from simulator; \
 	EXIT=$$?; docker compose -f tests/docker-compose.q1-test.yaml down -v; exit $$EXIT
 .PHONY: q1-test
+
+e2e:
+	docker compose -f tests/docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from client; \
+	EXIT=$$?; docker compose -f tests/docker-compose.e2e.yaml down -v; exit $$EXIT
+.PHONY: e2e

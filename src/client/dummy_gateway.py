@@ -1,87 +1,158 @@
-"""
-Dummy Gateway para pruebas de integración del Cliente Map-Reduce.
-Simula el comportamiento del servidor, control de congestión (ACKs) y envío de resultados.
-"""
+"""Mock ArticleHandler para e2e: socket con el cliente + RabbitMQ con Q1."""
+
+import argparse
 import logging
 import socket
 import sys
-import time
 
+from common.middleware.middleware_rabbitmq import MessageMiddlewareQueueRabbitMQ
 from common.protocol.constants import (
-    ExternalType,
+    ART_DATE_MODIFIED,
+    ART_DOCID,
+    ART_IN_LANGUAGE,
+    ART_URL,
     FLAG_IS_LAST_PART,
     FLAG_IS_SESSION_END,
+    ControlType,
+    ExternalType,
+    InternalType,
     ResultType,
 )
+from common.protocol.control import serializer as control
 from common.protocol.external import framing, serializer
+from common.protocol.internal import serializer as internal
 
-logging.basicConfig(level=logging.INFO, format="[GATEWAY] %(message)s")
+logging.basicConfig(level=logging.INFO, format="[MOCK-AH] %(message)s")
+logger = logging.getLogger("mock_ah")
 
-def run_dummy_gateway(host: str = "127.0.0.1", port: int = 8080):
-    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Permite reutilizar el puerto inmediatamente si reiniciamos el script
-    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    
-    server_sock.bind((host, port))
-    server_sock.listen(1)
-    logging.info(f"Escuchando conexiones en {host}:{port}...")
+CLIENT_ID = 1
+Q1_MASK = ART_DOCID | ART_URL | ART_DATE_MODIFIED | ART_IN_LANGUAGE
 
-    try:
+
+class MockArticleHandler:
+    def __init__(self, host, port, mom_host, in_queue, out_queue, controllers):
+        self.host = host
+        self.port = port
+        self.input = MessageMiddlewareQueueRabbitMQ(mom_host, in_queue)
+        self.results = MessageMiddlewareQueueRabbitMQ(mom_host, out_queue)
+        self.controllers = controllers
+        self.total_articles = 0
+        self.results_seen = 0
+        self.dones = 0
+
+    def run(self):
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((self.host, self.port))
+        server.listen(1)
+        logger.info(f"Escuchando en {self.host}:{self.port}")
+
+        try:
+            while True:
+                client_sock, addr = server.accept()
+                logger.debug(f"Cliente conectado desde {addr}")
+                try:
+                    self._handle_client(client_sock)
+                except ConnectionError:
+                    logger.debug("Cliente cerró sin enviar datos (healthcheck)")
+                except Exception as e:
+                    logger.error(f"Error con el cliente: {e}")
+                finally:
+                    client_sock.close()
+                    logger.debug("Cliente cerrado")
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.close()
+            self.input.close()
+            self.results.close()
+
+    def _handle_client(self, client_sock):
+        self.total_articles = 0
+        self.results_seen = 0
+
         while True:
-            client_sock, addr = server_sock.accept()
-            logging.info(f"Cliente conectado desde {addr}")
-            
-            try:
-                # 1. FASE DE RECEPCIÓN (Simulando Map)
-                while True:
-                    payload = framing.recv_message(client_sock)
-                    if not payload:
-                        break
-                        
-                    msg_type, data = serializer.deserialize_message(payload)
-                    logging.info(f"Mensaje recibido: {msg_type}")
-                    
-                    # Simulamos procesamiento y enviamos ACK (Backpressure)
-                    time.sleep(0.1) 
-                    framing.send_ack(client_sock)
-                    
-                    if msg_type == ExternalType.EOF:
-                        logging.info("EOF del cliente recibido. Terminando ingesta.")
-                        break
+            payload = framing.recv_message(client_sock)
+            msg_type, data = serializer.deserialize_message(payload)
+            framing.send_ack(client_sock)
 
-                # 2. FASE DE PROCESAMIENTO DISTRIBUIDO (Simulando Reduce)
-                logging.info("Simulando latencia del clúster de Map-Reduce (5 segundos)...")
-                for _ in range(5):
-                    time.sleep(1)
-                    # Enviamos latidos (ACKs) para que el ResultReceiver no muera por timeout
-                    framing.send_ack(client_sock)
-                    logging.info("Latido enviado.")
+            if msg_type == ExternalType.BATCH:
+                for article in data:
+                    self.input.send(
+                        internal.serialize_article_message(CLIENT_ID, article, Q1_MASK)
+                    )
+                    self.total_articles += 1
+                logger.info(f"BATCH recibido: {len(data)} artículos")
 
-                # 3. FASE DE DEVOLUCIÓN DE RESULTADOS
-                logging.info("Enviando resultados al cliente...")
-                
-                result_payload = serializer.serialize_result(
-                    result_type=ResultType.Q1,
-                    doc_id=1,
-                    part_id=1,
-                    flags=FLAG_IS_LAST_PART | FLAG_IS_SESSION_END,
-                    payload=serializer.serialize_q1_payload(
-                        "https://en.wikipedia.org/wiki/Dummy", 1577836800
-                    ),
-                )
-                framing.send_message(client_sock, result_payload)
-                logging.info("Sesión completada y cerrada limpiamente.")
+            elif msg_type == ExternalType.EOF:
+                logger.info(f"EOF del cliente. Total artículos: {self.total_articles}")
+                break
 
-            except Exception as e:
-                logging.error(f"Error procesando al cliente: {e}")
-            finally:
-                client_sock.close()
-                logging.info("Esperando nuevo cliente...\n")
-                
-    except KeyboardInterrupt:
-        logging.info("Apagando Dummy Gateway.")
-        server_sock.close()
-        sys.exit(0)
+            else:
+                logger.warning(f"Mensaje externo ignorado: {msg_type}")
+
+        self.input.send(control.serialize_eof(CLIENT_ID, self.total_articles))
+        self.dones = 0
+        self.results.start_consuming(
+            lambda body, ack, nack: self._on_result(client_sock, body, ack, nack)
+        )
+
+        final = serializer.serialize_result(
+            ResultType.Q1, 0, 0, FLAG_IS_LAST_PART | FLAG_IS_SESSION_END, b""
+        )
+        framing.send_message(client_sock, final)
+        logger.info(
+            f"Fin de sesión. Resultados reenviados: {self.results_seen}, "
+            f"DONEs: {self.dones}"
+        )
+
+    def _on_result(self, client_sock, body, ack, nack):
+        try:
+            if body[0] >= 101:
+                msg_type, client_id, message = control.deserialize(body)
+                if msg_type == ControlType.DONE and client_id == CLIENT_ID:
+                    self.dones += 1
+                    if self.dones >= self.controllers:
+                        self.results.stop_consuming()
+            else:
+                msg_type, client_id, result = internal.deserialize(body)
+                if msg_type == InternalType.RESULT and client_id == CLIENT_ID:
+                    self.results_seen += 1
+                    framing.send_message(
+                        client_sock,
+                        serializer.serialize_result(
+                            result["resultType"],
+                            result["docId"],
+                            result["partId"],
+                            result["flags"],
+                            result["payload"],
+                        ),
+                    )
+            ack()
+        except Exception:
+            nack()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument("--mom-host", default="localhost")
+    parser.add_argument("--in-queue", default="Q1_Test_Metadata")
+    parser.add_argument("--out-queue", default="Q1_Test_Results")
+    parser.add_argument("--controllers", type=int, default=1)
+    args = parser.parse_args()
+
+    MockArticleHandler(
+        args.host,
+        args.port,
+        args.mom_host,
+        args.in_queue,
+        args.out_queue,
+        args.controllers,
+    ).run()
+    return 0
+
 
 if __name__ == "__main__":
-    run_dummy_gateway()
+    sys.exit(main())
