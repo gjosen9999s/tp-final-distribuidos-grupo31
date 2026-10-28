@@ -15,3 +15,8 @@ down:
 logs:
 	docker compose -f docker-compose.yaml logs
 .PHONY: logs
+
+q1-test:
+	docker compose -f tests/docker-compose.q1-test.yaml up --build --abort-on-container-exit --exit-code-from simulator; \
+	EXIT=$$?; docker compose -f tests/docker-compose.q1-test.yaml down -v; exit $$EXIT
+.PHONY: q1-test

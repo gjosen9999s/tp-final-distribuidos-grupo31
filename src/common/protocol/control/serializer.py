@@ -1,6 +1,6 @@
 """Serialización del plano de control (EOF/PROGRESS/DONE/FLUSH)."""
 
-from ..constants import CTRL_DONE, CTRL_EOF, CTRL_FLUSH, CTRL_PROGRESS
+from ..constants import CTRL_DONE, CTRL_EOF, CTRL_FLUSH, CTRL_PROGRESS, ControlType
 from ..external.serializer import (
     Reader,
     serialize_uint8,
@@ -49,11 +49,13 @@ def deserialize(payload):
     reader = Reader(payload)
     msg_type = reader.uint8()
     client_id = reader.uint32()
-    if msg_type == CTRL_EOF:
-        return "eof", client_id, {"total": reader.uint32()}
-    if msg_type in (CTRL_PROGRESS, CTRL_DONE):
+    if msg_type == ControlType.EOF:
+        return ControlType.EOF, client_id, {"total": reader.uint32()}
+    if msg_type in (ControlType.PROGRESS, ControlType.DONE):
         return (
-            "progress" if msg_type == CTRL_PROGRESS else "done",
+            ControlType.PROGRESS
+            if msg_type == ControlType.PROGRESS
+            else ControlType.DONE,
             client_id,
             {
                 "controllerType": reader.uint8(),
@@ -61,6 +63,6 @@ def deserialize(payload):
                 "quantity": reader.uint32(),
             },
         )
-    if msg_type == CTRL_FLUSH:
-        return "flush", client_id, {"flushId": reader.uint32()}
+    if msg_type == ControlType.FLUSH:
+        return ControlType.FLUSH, client_id, {"flushId": reader.uint32()}
     raise ValueError(f"tipo de control desconocido: {msg_type}")

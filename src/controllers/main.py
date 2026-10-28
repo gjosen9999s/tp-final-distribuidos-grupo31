@@ -2,7 +2,6 @@
 import importlib
 import os
 import signal
-import socket
 import sys
 
 from common.middleware.middleware_rabbitmq import (
@@ -42,19 +41,26 @@ def build(controller_type):
 
     in_mw = MessageMiddlewareQueueRabbitMQ(mom_host, in_queue) if in_queue else None
     out_mw = MessageMiddlewareQueueRabbitMQ(mom_host, out_queue) if out_queue else None
-    control_mw = (
-        MessageMiddlewareExchangeRabbitMQ(mom_host, control_exchange, [control_key])
-        if control_exchange and control_key
-        else None
-    )
+
+    control_in = None
+    control_out = None
+    if control_exchange and control_key:
+        control_in = MessageMiddlewareExchangeRabbitMQ(
+            mom_host, control_exchange, [control_key]
+        )
+        control_out = MessageMiddlewareExchangeRabbitMQ(
+            mom_host, control_exchange, [control_key]
+        )
 
     return controller_class(
         controller_type=controller_type,
         in_mw=in_mw,
         out_mw=out_mw,
-        control_mw=control_mw,
-        node_id=os.getenv("NODE_ID") or socket.gethostname(),
+        control_in=control_in,
+        control_out=control_out,
+        node_id=int(os.getenv("NODE_ID", "0")),
         progress_batch_size=int(os.getenv("PROGRESS_BATCH_SIZE", "100")),
+        controller_count=int(os.getenv("CONTROLLER_COUNT", "1")),
     )
 
 

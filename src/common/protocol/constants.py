@@ -1,5 +1,7 @@
 """Constantes de los protocolos."""
 
+from enum import IntEnum
+
 UINT8_SIZE = 1
 UINT16_SIZE = 2
 UINT32_SIZE = 4
@@ -57,3 +59,38 @@ CTRL_EOF = 101
 CTRL_PROGRESS = 102
 CTRL_DONE = 103
 CTRL_FLUSH = 104
+
+
+class ExternalType(IntEnum):
+    BATCH = EXT_BATCH
+    EOF = EXT_EOF
+    RESULT = EXT_RESULT
+    ERROR = EXT_ERROR
+
+
+class InternalType(IntEnum):
+    ARTICLE = INT_ARTICLE
+    WORD_Q3 = INT_WORD_Q3
+    WORD_Q4 = INT_WORD_Q4
+    IMG_REQ = INT_IMG_REQ
+    WORDCOUNT_SUM = INT_WORDCOUNT_SUM
+    WORDCOUNT_CAND = INT_WORDCOUNT_CAND
+    Q3_PARTIAL = INT_Q3_PARTIAL
+    Q4_PARTIAL = INT_Q4_PARTIAL
+    Q5_ACC_PARTIAL = INT_Q5_ACC_PARTIAL
+    RESULT = INT_RESULT
+
+
+class ControlType(IntEnum):
+    EOF = CTRL_EOF
+    PROGRESS = CTRL_PROGRESS
+    DONE = CTRL_DONE
+    FLUSH = CTRL_FLUSH
+
+
+class ResultType(IntEnum):
+    Q1 = 1
+    Q2 = 2
+    Q3 = 3
+    Q4 = 4
+    Q5 = 5
