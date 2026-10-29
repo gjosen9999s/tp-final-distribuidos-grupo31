@@ -20,6 +20,7 @@ services:
       SERVER_PORT: "5678"
       MOM_HOST: rabbitmq
       RESULTS_QUEUE: QueryResults
+      DATA_QUEUES: Q1_Metadata
       LOGS_QUEUE: logs
     ports:
       - "5678:5678"
