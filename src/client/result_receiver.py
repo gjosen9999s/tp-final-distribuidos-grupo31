@@ -5,8 +5,10 @@ Implementa procesamiento de latidos (heartbeats) para mantener viva la sesión d
 """
 import logging
 import socket
+from datetime import datetime, timezone
 from typing import Any, Dict
-from common.protocol.constants import ExternalType, FLAG_IS_SESSION_END
+
+from common.protocol.constants import ExternalType, FLAG_IS_SESSION_END, ResultType
 from common.protocol.external import framing, serializer
 
 logger = logging.getLogger(__name__)
@@ -32,12 +34,21 @@ class ResultReceiver:
         Procesa de manera individual cada resultado retornado por el clúster.
         """
         self._results_received += 1
-        # ¿lógica de negocio final (ej. guardar a disco local)?
+        detail = self._describe(data.get("resultType"), data.get("payload", b""))
         logger.info(
-            f"Resultado [{self._results_received}] recibido: "
-            f"Tipo: {data.get('resultType')} | DocID: {data.get('docId')} | "
-            f"PartID: {data.get('partId')} | Payload: {len(data.get('payload', b''))} bytes"
+            f"Resultado [{self._results_received}] Q{data.get('resultType')} "
+            f"doc={data.get('docId')} part={data.get('partId')} -> {detail}"
         )
+
+    @staticmethod
+    def _describe(result_type, payload):
+        if not payload:
+            return "fin de sesión"
+        if result_type == ResultType.Q1:
+            item = serializer.deserialize_q1_payload(payload)
+            date = datetime.fromtimestamp(item["dateModified"], tz=timezone.utc)
+            return f"{item['url']} ({date:%Y-%m-%d %H:%M:%S UTC})"
+        return f"{len(payload)} bytes (sin decodificar)"
 
     def receive_until_last(self) -> None:
         """

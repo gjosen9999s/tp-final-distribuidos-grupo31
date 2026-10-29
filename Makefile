@@ -25,3 +25,8 @@ e2e:
 	docker compose -f tests/docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from client; \
 	EXIT=$$?; docker compose -f tests/docker-compose.e2e.yaml down -v; exit $$EXIT
 .PHONY: e2e
+
+e2e-3:
+	docker compose -f tests/docker-compose.e2e-3.yaml up --build --abort-on-container-exit --exit-code-from runner; \
+	EXIT=$$?; docker compose -f tests/docker-compose.e2e-3.yaml down -v; exit $$EXIT
+.PHONY: e2e-3

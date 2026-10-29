@@ -1,0 +1,42 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  q1:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: q1_test
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q1_controller
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q1_Test_Metadata
+      OUT_QUEUE: Q1_Test_Results
+      CONTROL_EXCHANGE: control_test
+      CONTROL_KEY: q1_test
+      NODE_ID: "0"
+      PROGRESS_BATCH_SIZE: "2"
+      CONTROLLER_COUNT: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  simulator:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["python", "/app/tests/simulate_ah_q1.py", "--host", "rabbitmq", "--controllers", "1"]
+    volumes:
+      - ./:/app/tests
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      q1:
+        condition: service_started
