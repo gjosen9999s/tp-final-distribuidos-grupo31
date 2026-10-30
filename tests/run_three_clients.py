@@ -1,30 +1,12 @@
-"""Corre 3 clientes en paralelo sobre el set dividido en 3 y verifica Q1."""
+"""Corre 3 clientes en paralelo sobre los parquet cortados de /data y verifica Q1."""
 
 import re
 import subprocess
 import sys
-from pathlib import Path
 
-import pyarrow.parquet as pq
-
-SOURCE = "/app/src/client/test.parquet"
-TMP = Path("/tmp/q1_clients")
 CLIENTS = 3
 EXPECTED = 1111
-
-
-def split_dataset():
-    TMP.mkdir(parents=True, exist_ok=True)
-    table = pq.ParquetFile(SOURCE).read()
-    total = table.num_rows
-    paths = []
-    for index in range(CLIENTS):
-        start = index * total // CLIENTS
-        end = (index + 1) * total // CLIENTS
-        path = TMP / f"client_{index + 1}.parquet"
-        pq.write_table(table.slice(start, end - start), path)
-        paths.append(path)
-    return paths
+PATHS = [f"/data/e2e_{index}.parquet" for index in range(1, CLIENTS + 1)]
 
 
 def start_client(path):
@@ -33,11 +15,11 @@ def start_client(path):
         "-m",
         "client.main",
         "--input",
-        str(path),
+        path,
         "--host",
-        "mock_ah",
+        "article_handler",
         "--port",
-        "8080",
+        "5678",
         "--timeout",
         "240",
     ]
@@ -50,8 +32,7 @@ def start_client(path):
 
 
 def main():
-    paths = split_dataset()
-    processes = [(index + 1, start_client(path)) for index, path in enumerate(paths)]
+    processes = [(index + 1, start_client(path)) for index, path in enumerate(PATHS)]
 
     totals = []
     failures = 0

@@ -65,7 +65,9 @@ def main():
         logger.info("Cerrando recursos y conexiones TCP/MOM...")
         stop.set()
         sessions.close_all()
+        ingest.stop()
         ingest.join()
+        egress.stop()
         egress.join()
         for queue in data_queues.values():
             queue.close()

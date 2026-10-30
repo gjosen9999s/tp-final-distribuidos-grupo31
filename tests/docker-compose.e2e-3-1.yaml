@@ -12,13 +12,13 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: q1_e2e3
+    container_name: q1_e2e31
     command: ["python", "-m", "controllers.main"]
     environment:
       CONTROLLER_TYPE: q1_controller
       MOM_HOST: rabbitmq
-      IN_QUEUE: Q1_Test_Metadata
-      OUT_QUEUE: Q1_Test_Results
+      IN_QUEUE: Q1_Metadata
+      OUT_QUEUE: QueryResults
       CONTROL_EXCHANGE: control_test
       CONTROL_KEY: q1_test
       NODE_ID: "0"
@@ -28,14 +28,21 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  mock_ah:
+  article_handler:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: mock_ah_e2e3
-    command: ["python", "-m", "client.dummy_gateway", "--host", "0.0.0.0", "--port", "8080", "--mom-host", "rabbitmq", "--controllers", "1", "--clients", "3"]
+    container_name: article_handler_e2e31
+    command: ["python", "-m", "article_handler.main"]
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "5678"
+      MOM_HOST: rabbitmq
+      RESULTS_QUEUE: QueryResults
+      DATA_QUEUES: Q1_Metadata
+      CONTROLLERS_COUNT: "1"
     healthcheck:
-      test: ["CMD-SHELL", "test -f /tmp/mock_ah_ready"]
+      test: ["CMD-SHELL", "test -f /tmp/article_handler_ready"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -50,10 +57,11 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: runner_e2e3
+    container_name: runner_e2e31
     command: ["python", "/app/tests/run_three_clients.py"]
     volumes:
       - ../tests:/app/tests
+      - ../data:/data
     depends_on:
-      mock_ah:
+      article_handler:
         condition: service_healthy

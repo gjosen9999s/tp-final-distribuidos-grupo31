@@ -48,6 +48,10 @@ class ClientSession:
             else:
                 self._buffer.append(payload)
 
+    def is_eof_reached(self) -> bool:
+        with self._lock:
+            return self._eof_reached
+
     def register_done(self) -> bool:
         """
         Incrementa los mensajes DONE recibidos de las réplicas.

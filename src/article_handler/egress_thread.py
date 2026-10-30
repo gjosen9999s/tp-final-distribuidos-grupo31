@@ -50,6 +50,8 @@ class EgressThread(threading.Thread):
                                     f"[EgressThread] Recibidos {session.dones_count}/{session.expected_dones} DONEs. "
                                     f"Fin de sesión enviado a cliente ID={client_id}"
                                 )
+                                if session.is_eof_reached():
+                                    self.sessions.unregister_session(client_id)
                             except (BrokenPipeError, ConnectionResetError, OSError) as e:
                                 logger.warning(f"[EgressThread] Cliente ID={client_id} desconectado al enviar DONE: {e}")
                                 self.sessions.unregister_session(client_id)

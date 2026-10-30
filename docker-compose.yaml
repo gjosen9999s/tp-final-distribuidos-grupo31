@@ -21,6 +21,7 @@ services:
       MOM_HOST: rabbitmq
       RESULTS_QUEUE: QueryResults
       DATA_QUEUES: Q1_Metadata
+      CONTROLLERS_COUNT: "3"
       LOGS_QUEUE: logs
     ports:
       - "5678:5678"
@@ -28,7 +29,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',5678),2); s.close()"]
+      test: ["CMD-SHELL", "test -f /tmp/article_handler_ready"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -45,6 +46,7 @@ services:
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q1
       PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "0"
     depends_on:
       rabbitmq:
@@ -62,6 +64,7 @@ services:
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q1
       PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "1"
     depends_on:
       rabbitmq:
@@ -79,6 +82,7 @@ services:
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q1
       PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "2"
     depends_on:
       rabbitmq:
@@ -87,6 +91,7 @@ services:
   log_controller:
     build: .
     container_name: log_controller
+    profiles: ["logs"]
     command: ["python", "-m", "log_controller.main"]
     environment:
       MOM_HOST: rabbitmq
@@ -101,7 +106,7 @@ services:
   client_1:
     build: .
     container_name: client_1
-    command: ["python", "-m", "client.main", "--input", "/data/input_1.parquet", "--host", "article_handler", "--port", "5678"]
+    command: ["python", "-m", "client.main", "--input", "/data/input_1.parquet", "--host", "article_handler", "--port", "5678", "--timeout", "240"]
     volumes:
       - ./data:/data
       - ./output:/output
