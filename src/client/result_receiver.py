@@ -28,12 +28,18 @@ class ResultReceiver:
         self._socket: socket.socket = sock
         # Estado interno de la recepción
         self._results_received: int = 0
+        self._results_by_query_type: Dict[int, int]={}
 
     def _process_result(self, data: Dict[str, Any]) -> None:
         """
         Procesa de manera individual cada resultado retornado por el clúster.
         """
+        
         self._results_received += 1
+        resultType=data.get("resultType")
+        if resultType and resultType > 0:
+            self._results_by_query_type[resultType] = self._results_by_query_type.get(resultType, 0) + 1 
+
         detail = self._describe(data.get("resultType"), data.get("payload", b""))
         logger.info(
             f"Resultado [{self._results_received}] Q{data.get('resultType')} "

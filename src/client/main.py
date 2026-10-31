@@ -31,6 +31,7 @@ class ClientConfig:
     server_host: str
     server_port: int
     timeout: float
+    summary_file: str 
 
     @classmethod
     def from_env_and_args(cls) -> "ClientConfig":
@@ -39,6 +40,7 @@ class ClientConfig:
         parser.add_argument("--host", default=os.getenv("SERVER_HOST"))
         parser.add_argument("--port", type=int, default=os.getenv("SERVER_PORT"))
         parser.add_argument("--timeout", type=float, default=os.getenv("TIMEOUT", "60.0"))
+        parser.add_argument("--summary", default=os.getenv("SUMMARY_FILE"))
         
         args = parser.parse_args()
 
@@ -53,7 +55,8 @@ class ClientConfig:
             input_file=args.input,
             server_host=args.host,
             server_port=args.port,
-            timeout=args.timeout
+            timeout=args.timeout,
+            summary_file=args.summary
         )
 
 
@@ -132,6 +135,11 @@ def main() -> int:
         if not shutdown_handler.is_requested:
             logger.info("Transmision finalizada. Delegando control al ResultReceiver...")
             receiver.receive_until_last()
+
+        # Escritura de totales de control
+        with open(config.summary_file, "w", encoding="utf-8") as file:
+            for query_id, count in sorted(receiver._results_by_query_type.items()):
+                file.write(f"Q{query_id}: {count}\n")
 
         logger.info("Ejecucion del cliente finalizada con exito.")
         return 0

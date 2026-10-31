@@ -106,7 +106,30 @@ services:
   client_1:
     build: .
     container_name: client_1
-    command: ["python", "-m", "client.main", "--input", "/data/input_1.parquet", "--host", "article_handler", "--port", "5678", "--timeout", "240"]
+    command: ["python", "-m", "client.main"]
+    environment:
+      INPUT_FILE: /data/input_1.parquet
+      SUMMARY_FILE: /output/summary_1.txt
+      SERVER_HOST: article_handler
+      SERVER_PORT: "5678"
+      TIMEOUT: "240"
+    volumes:
+      - ./data:/data
+      - ./output:/output
+    depends_on:
+      article_handler:
+        condition: service_healthy
+
+  client_2:
+    build: .
+    container_name: client_2
+    command: ["python", "-m", "client.main"]
+    environment:
+      INPUT_FILE: /data/e2e_1.parquet
+      SUMMARY_FILE: /output/summary_2.txt
+      SERVER_HOST: article_handler
+      SERVER_PORT: "5678"
+      TIMEOUT: "240"
     volumes:
       - ./data:/data
       - ./output:/output
