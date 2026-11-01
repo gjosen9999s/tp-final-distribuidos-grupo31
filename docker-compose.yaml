@@ -108,8 +108,13 @@ services:
     container_name: client_1
     command: ["python", "-m", "client.main"]
     environment:
-      INPUT_FILE: /data/input_1.parquet
-      SUMMARY_FILE: /output/summary_1.txt
+      INPUT_FILE:       /data/input_1.parquet
+      SUMMARY_FILE:     /output/input_1.summary.txt
+      OUTPUT_FILE_Q1:   /output/input_1.output2.q1.txt
+      OUTPUT_FILE_Q2:   /output/input_1.output2.q2.txt
+      OUTPUT_FILE_Q3:   /output/input_1.output2.q3.txt
+      OUTPUT_FILE_Q4:   /output/input_1.output2.q4.txt
+      OUTPUT_FILE_Q5:   /output/input_1.output2.q5.txt
       SERVER_HOST: article_handler
       SERVER_PORT: "5678"
       TIMEOUT: "240"
@@ -126,7 +131,12 @@ services:
     command: ["python", "-m", "client.main"]
     environment:
       INPUT_FILE: /data/e2e_1.parquet
-      SUMMARY_FILE: /output/summary_2.txt
+      SUMMARY_FILE:     /output/e2e_1.summary.txt
+      OUTPUT_FILE_Q1:   /output/e2e_1.output2.q1.txt
+      OUTPUT_FILE_Q2:   /output/e2e_1.output2.q2.txt
+      OUTPUT_FILE_Q3:   /output/e2e_1.output2.q3.txt
+      OUTPUT_FILE_Q4:   /output/e2e_1.output2.q4.txt
+      OUTPUT_FILE_Q5:   /output/e2e_1.output2.q5.txt
       SERVER_HOST: article_handler
       SERVER_PORT: "5678"
       TIMEOUT: "240"

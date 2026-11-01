@@ -8,9 +8,9 @@ import os
 import signal
 import socket
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 from types import FrameType
-from typing import Optional
+from typing import Dict, Optional
 
 from client.batch_sender import BatchSender
 from client.parquet_reader import ParquetReader
@@ -31,7 +31,7 @@ class ClientConfig:
     server_host: str
     server_port: int
     timeout: float
-    summary_file: str 
+    output_files: Dict [str,str]=field(default_factory=dict)
 
     @classmethod
     def from_env_and_args(cls) -> "ClientConfig":
@@ -41,7 +41,12 @@ class ClientConfig:
         parser.add_argument("--port", type=int, default=os.getenv("SERVER_PORT"))
         parser.add_argument("--timeout", type=float, default=os.getenv("TIMEOUT", "60.0"))
         parser.add_argument("--summary", default=os.getenv("SUMMARY_FILE"))
-        
+        parser.add_argument("--output1", default=os.getenv("OUTPUT_FILE_Q1"))
+        parser.add_argument("--output2", default=os.getenv("OUTPUT_FILE_Q2"))
+        parser.add_argument("--output3", default=os.getenv("OUTPUT_FILE_Q3"))
+        parser.add_argument("--output4", default=os.getenv("OUTPUT_FILE_Q4"))
+        parser.add_argument("--output5", default=os.getenv("OUTPUT_FILE_Q5"))
+
         args = parser.parse_args()
 
         if not args.input:
@@ -51,12 +56,21 @@ class ClientConfig:
         if not args.port:
             raise ValueError("Falta la configuracion critica: SERVER_PORT (o argumento --port)")
 
+        output_files = {
+            "summary": args.summary,
+            "q1": args.output1,
+            "q2": args.output2,
+            "q3": args.output3,
+            "q4": args.output4,
+            "q5": args.output5,
+            }
+
         return cls(
             input_file=args.input,
             server_host=args.host,
             server_port=args.port,
             timeout=args.timeout,
-            summary_file=args.summary
+            output_files=output_files
         )
 
 
@@ -102,6 +116,7 @@ def main() -> int:
         logger.critical(f"Error de configuracion en el arranque: {e}")
         return 1
 
+
     shutdown_handler = GracefulShutdown()
     shared_socket: Optional[socket.socket] = None
     reader: Optional[ParquetReader] = None
@@ -113,12 +128,13 @@ def main() -> int:
             config.server_port, 
             config.timeout
         )
-        
+
         reader = ParquetReader(config.input_file)
         
         # El mismo socket para envio y recepcion
         sender = BatchSender(shared_socket)
-        receiver = ResultReceiver(shared_socket)
+
+        receiver = ResultReceiver(shared_socket,config.output_files)
 
         # Ingesta
         logger.info("Iniciando lectura y transmision de lotes Parquet...")
@@ -137,7 +153,7 @@ def main() -> int:
             receiver.receive_until_last()
 
         # Escritura de totales de control
-        with open(config.summary_file, "w", encoding="utf-8") as file:
+        with open(config.output_files["summary"], "a", encoding="utf-8") as file:
             for query_id, count in sorted(receiver._results_by_query_type.items()):
                 file.write(f"Q{query_id}: {count}\n")
 
