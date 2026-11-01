@@ -21,20 +21,38 @@ class ResultReceiver:
     y fallar rápido ante desconexiones silenciosas o errores del clúster.
     """
 
-    def __init__(self, sock: socket.socket) -> None:
+    def __init__(self, sock: socket.socket, outfiles: Dict[str,str]) -> None:
         """
         Inicializa el receiver recibiendo el socket ya conectado y configurado.
         """
         self._socket: socket.socket = sock
         # Estado interno de la recepción
         self._results_received: int = 0
+        self._results_by_query_type: Dict[int, int]={}
+
+        self._outfiles=outfiles
+
+        for filetype, filename in self._outfiles.items():
+            with open(filename, "w", encoding="utf-8") as filedescriptor:
+                pass
 
     def _process_result(self, data: Dict[str, Any]) -> None:
         """
         Procesa de manera individual cada resultado retornado por el clúster.
         """
+        
         self._results_received += 1
+        resultType=data.get("resultType")
+        if resultType and resultType > 0:
+            self._results_by_query_type[resultType] = self._results_by_query_type.get(resultType, 0) + 1 
+
         detail = self._describe(data.get("resultType"), data.get("payload", b""))
+
+        #falta para las demas Queries, por ahora solo Q1
+        if resultType and resultType > 0:
+            with open(self._outfiles.get("q1"), "a", encoding="utf-8") as file:
+                file.write(detail+"\n")
+
         logger.info(
             f"Resultado [{self._results_received}] Q{data.get('resultType')} "
             f"doc={data.get('docId')} part={data.get('partId')} -> {detail}"
@@ -47,7 +65,7 @@ class ResultReceiver:
         if result_type == ResultType.Q1:
             item = serializer.deserialize_q1_payload(payload)
             date = datetime.fromtimestamp(item["dateModified"], tz=timezone.utc)
-            return f"{item['url']} ({date:%Y-%m-%d %H:%M:%S UTC})"
+            return f'"{item['url']}",{date:%Y-%m-%d %H:%M:%S}'
         return f"{len(payload)} bytes (sin decodificar)"
 
     def receive_until_last(self) -> None:
