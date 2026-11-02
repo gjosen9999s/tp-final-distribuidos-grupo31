@@ -29,13 +29,11 @@ class ResultReceiver:
         # Estado interno de la recepción
         self._results_received: int = 0
         self._results_by_query_type: Dict[int, int]={}
+        self._filehandlers: Dict[str,Any]={}
 
-        self._outfiles=outfiles
-
-        for filetype, filename in self._outfiles.items():
-            with open(filename, "w", encoding="utf-8") as filedescriptor:
-                pass
-
+        for filetype, filename in outfiles.items():
+            self._filehandlers[filetype]=open(filename, "w", encoding="utf-8")
+         
     def _process_result(self, data: Dict[str, Any]) -> None:
         """
         Procesa de manera individual cada resultado retornado por el clúster.
@@ -43,15 +41,13 @@ class ResultReceiver:
         
         self._results_received += 1
         resultType=data.get("resultType")
-        if resultType and resultType > 0:
-            self._results_by_query_type[resultType] = self._results_by_query_type.get(resultType, 0) + 1 
-
+       
         detail = self._describe(data.get("resultType"), data.get("payload", b""))
 
-        #falta para las demas Queries, por ahora solo Q1
+        # Incremento de total x query y escritura de archivo de salida para la query en cuestion
         if resultType and resultType > 0:
-            with open(self._outfiles.get("q1"), "a", encoding="utf-8") as file:
-                file.write(detail+"\n")
+            self._results_by_query_type[resultType] = self._results_by_query_type.get(resultType, 0) + 1 
+            self._filehandlers.get(f"q{resultType}").write(detail+"\n")
 
         logger.info(
             f"Resultado [{self._results_received}] Q{data.get('resultType')} "
@@ -124,3 +120,7 @@ class ResultReceiver:
         except Exception as e:
             logger.critical(f"Error crítico irrecuperable en el bucle de recepción: {e}")
             raise
+
+    def close_files(self) -> None:
+        for handle in self._filehandlers.values():
+            handle.close()
