@@ -157,6 +157,8 @@ def main() -> int:
             for query_id, count in sorted(receiver._results_by_query_type.items()):
                 file.write(f"Q{query_id}: {count}\n")
 
+        receiver.close_files()
+        
         logger.info("Ejecucion del cliente finalizada con exito.")
         return 0
 
