@@ -39,7 +39,7 @@ class GroupCoordinator:
         self.control_out = control_out
         self.done_sender = done_sender
         self._states = {}
-        self._lock = threading.RLock()
+        self._lock = threading.Lock()
 
     def _state(self, client_id):
         state = self._states.get(client_id)
