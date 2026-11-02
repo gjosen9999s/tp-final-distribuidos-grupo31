@@ -34,26 +34,31 @@ class Controller(ABC):
         self._lock = threading.Lock()
         self._states = {}
         self._stopping = threading.Event()
+        self._control_thread = None
 
     def run(self):
-        control_thread = threading.Thread(target=self._consume_control, daemon=True)
-        control_thread.start()
+        self._control_thread = threading.Thread(target=self._consume_control)
+        self._control_thread.start()
         try:
             self.in_mw.start_consuming(self._on_data)
         except Exception:
             if not self._stopping.is_set():
                 raise
+        finally:
+            self._stopping.set()
+            self._stop_consumers()
+            self._control_thread.join(timeout=5)
 
     def stop(self):
         self._stopping.set()
-        try:
-            self.in_mw.stop_consuming_threadsafe()
-        except Exception:
-            pass
-        try:
-            self.control_in.stop_consuming_threadsafe()
-        except Exception:
-            pass
+        self._stop_consumers()
+
+    def _stop_consumers(self):
+        for middleware in (self.in_mw, self.control_in):
+            try:
+                middleware.stop_consuming_threadsafe()
+            except Exception:
+                pass
 
     def _consume_control(self):
         try:
