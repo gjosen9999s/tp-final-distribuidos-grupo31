@@ -181,13 +181,13 @@ def calc_abstract_word_count_average(df):
     count = 0
     total = 0
     for abstract in df['abstract'].dropna():
-        total += len(extract_non_stopwords_from_abstract(abstract))
+        total += len(set(extract_non_stopwords_from_abstract(abstract)))
         count += 1
     return total/count
 
 df_avg_before_2020 = calc_abstract_word_count_average(df_before_2020)
 
-df_after_2020 ["abstract_word_count"] = df_after_2020 ["abstract"].apply(lambda abstract: len(extract_non_stopwords_from_abstract(abstract)))
+df_after_2020 ["abstract_word_count"] = df_after_2020 ["abstract"].apply(lambda abstract: len(set(extract_non_stopwords_from_abstract(abstract))))
 q5 = df_after_2020 [df_after_2020["abstract_word_count"] > df_avg_before_2020 ][["url","abstract_word_count"]]
 
 # Escritura en archivo sumario de totales de Q5
