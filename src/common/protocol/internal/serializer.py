@@ -15,6 +15,8 @@ from ..constants import (
     INT_RESULT,
     INT_WORD_Q3,
     INT_WORD_Q4,
+    INT_WORDCOUNT_CAND,
+    INT_WORDCOUNT_SUM,
     InternalType,
 )
 from ..external.serializer import (
@@ -90,6 +92,28 @@ def serialize_result_message(client_id, result_type, doc_id, part_id, flags, pay
     )
 
 
+def serialize_wordcount_sum(client_id: int, word_count: int) -> bytes:
+    """WORDCOUNT_SUM: conteo de palabras únicas de un artículo ≤2020."""
+    return (
+        serialize_uint8(INT_WORDCOUNT_SUM)
+        + serialize_uint32(client_id)
+        + serialize_uint32(word_count)
+    )
+
+
+def serialize_wordcount_cand(
+    client_id: int, word_count: int, doc_id: int, url: str
+) -> bytes:
+    """WORDCOUNT_CAND: conteo + identificador de un artículo candidato ≥2021."""
+    return (
+        serialize_uint8(INT_WORDCOUNT_CAND)
+        + serialize_uint32(client_id)
+        + serialize_uint32(word_count)
+        + serialize_uint32(doc_id)
+        + serialize_string(url)
+    )
+
+
 def deserialize(payload):
     # Todo mensaje interno arranca con [1B tipo][4B clientId].
     reader = Reader(payload)
@@ -113,7 +137,6 @@ def deserialize(payload):
                 "payload": reader.bytes(),
             },
         )
-
     # [1B tipo=2][4B clientId][4B len word][word][1B inLanguage]
     if msg_type == InternalType.WORD_Q3:
         return InternalType.WORD_Q3, client_id, {
@@ -134,6 +157,19 @@ def deserialize(payload):
             "words": reader.list(lambda current: current.string()),
         }
     
+    if msg_type == InternalType.WORDCOUNT_SUM:
+        return InternalType.WORDCOUNT_SUM, client_id, {"wordCount": reader.uint32()}
+
+    if msg_type == InternalType.WORDCOUNT_CAND:
+        return (
+            InternalType.WORDCOUNT_CAND,
+            client_id,
+            {
+                "wordCount": reader.uint32(),
+                "docId": reader.uint32(),
+                "url": reader.string(),
+            },
+        )
     raise ValueError(f"tipo interno desconocido: {msg_type}")
 
 def serialize_word_q3_message(client_id, word, in_language):
