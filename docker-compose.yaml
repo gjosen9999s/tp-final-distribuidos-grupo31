@@ -20,7 +20,7 @@ services:
       SERVER_PORT: "5678"
       MOM_HOST: rabbitmq
       RESULTS_QUEUE: QueryResults
-      DATA_QUEUES: Q1_Metadata
+      DATA_QUEUES: Q1_Metadata,Q34_Abstract
       CONTROLLERS_COUNT: "3"
       LOGS_QUEUE: logs
     ports:
@@ -84,6 +84,24 @@ services:
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "3"
       NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer:
+    build: .
+    container_name: tokenizer
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q34_Abstract
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      NODE_ID: "0"
+      PARTITIONS: "1"
     depends_on:
       rabbitmq:
         condition: service_healthy
