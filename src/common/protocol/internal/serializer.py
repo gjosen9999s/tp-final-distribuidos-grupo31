@@ -11,6 +11,7 @@ from ..constants import (
     ART_SECTIONS_FLAGS,
     ART_URL,
     INT_ARTICLE,
+    INT_Q3_PARTIAL,
     INT_RESULT,
     INT_WORD_Q3,
     INT_WORD_Q4,
@@ -19,6 +20,7 @@ from ..constants import (
 from ..external.serializer import (
     Reader,
     serialize_bytes,
+    serialize_list,
     serialize_uint8,
     serialize_uint32,
     serialize_string,
@@ -89,12 +91,16 @@ def serialize_result_message(client_id, result_type, doc_id, part_id, flags, pay
 
 
 def deserialize(payload):
+    # Todo mensaje interno arranca con [1B tipo][4B clientId].
     reader = Reader(payload)
     msg_type = reader.uint8()
     client_id = reader.uint32()
+
+    # [1B tipo=1][4B clientId][1B mask][campos según mask]
     if msg_type == InternalType.ARTICLE:
         return InternalType.ARTICLE, client_id, deserialize_article(reader)
-    
+
+    # [1B tipo=10][4B clientId][1B resultType][4B docId][4B partId][1B flags][4B len payload][payload]
     if msg_type == InternalType.RESULT:
         return (
             InternalType.RESULT,
@@ -121,6 +127,12 @@ def deserialize(payload):
             "docId": reader.uint32(),
             "word": reader.string(),
         }
+
+    # [1B tipo=7][4B clientId][4B len words][ [4B len word][word] ... ]
+    if msg_type == InternalType.Q3_PARTIAL:
+        return InternalType.Q3_PARTIAL, client_id, {
+            "words": reader.list(lambda current: current.string()),
+        }
     
     raise ValueError(f"tipo interno desconocido: {msg_type}")
 
@@ -139,4 +151,12 @@ def serialize_word_q4_message(client_id, doc_id, word):
         + serialize_uint32(client_id)
         + serialize_uint32(doc_id)
         + serialize_string(word)
+    )
+
+
+def serialize_q3_partial_message(client_id, words):
+    return (
+        serialize_uint8(INT_Q3_PARTIAL)
+        + serialize_uint32(client_id)
+        + serialize_list(words, serialize_string)
     )
