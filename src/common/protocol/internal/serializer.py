@@ -11,6 +11,7 @@ from ..constants import (
     ART_SECTIONS_FLAGS,
     ART_URL,
     INT_ARTICLE,
+    INT_Q5_ACC_PARTIAL,
     INT_RESULT,
     INT_WORD_Q3,
     INT_WORD_Q4,
@@ -112,6 +113,18 @@ def serialize_wordcount_cand(
     )
 
 
+def serialize_q5_acc_partial(
+    client_id: int, total_sum: int, count: int
+) -> bytes:
+    """Q5_ACC_PARTIAL: (sum, count) de articulos de antes del 2020 para el Q5_AVG_Filter."""
+    return (
+        serialize_uint8(INT_Q5_ACC_PARTIAL)
+        + serialize_uint32(client_id)
+        + serialize_uint32(total_sum)
+        + serialize_uint32(count)
+    )
+
+
 def deserialize(payload):
     reader = Reader(payload)
     msg_type = reader.uint8()
@@ -156,6 +169,16 @@ def deserialize(payload):
                 "wordCount": reader.uint32(),
                 "docId": reader.uint32(),
                 "url": reader.string(),
+            },
+        )
+
+    if msg_type == InternalType.Q5_ACC_PARTIAL:
+        return (
+            InternalType.Q5_ACC_PARTIAL,
+            client_id,
+            {
+                "totalSum": reader.uint32(),
+                "count": reader.uint32(),
             },
         )
     raise ValueError(f"tipo interno desconocido: {msg_type}")
