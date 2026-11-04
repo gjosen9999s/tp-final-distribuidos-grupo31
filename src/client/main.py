@@ -32,6 +32,7 @@ class ClientConfig:
     server_port: int
     timeout: float
     output_files: Dict [str,str]=field(default_factory=dict)
+    image_dir: str | None = None
 
     @classmethod
     def from_env_and_args(cls) -> "ClientConfig":
@@ -46,6 +47,7 @@ class ClientConfig:
         parser.add_argument("--output3", default=os.getenv("OUTPUT_FILE_Q3"))
         parser.add_argument("--output4", default=os.getenv("OUTPUT_FILE_Q4"))
         parser.add_argument("--output5", default=os.getenv("OUTPUT_FILE_Q5"))
+        parser.add_argument("--img-dir", default=os.getenv("OUTPUT_IMG_DIR"))
 
         args = parser.parse_args()
 
@@ -70,7 +72,8 @@ class ClientConfig:
             server_host=args.host,
             server_port=args.port,
             timeout=args.timeout,
-            output_files=output_files
+            output_files=output_files,
+            image_dir=args.img_dir
         )
 
 
@@ -134,7 +137,9 @@ def main() -> int:
         # El mismo socket para envio y recepcion
         sender = BatchSender(shared_socket)
 
-        receiver = ResultReceiver(shared_socket,config.output_files)
+        receiver = ResultReceiver(
+            shared_socket, config.output_files, config.image_dir
+        )
 
         # Ingesta
         logger.info("Iniciando lectura y transmision de lotes Parquet...")
