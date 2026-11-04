@@ -67,6 +67,9 @@ class ResultReceiver:
             item = serializer.deserialize_q1_payload(payload)
             date = datetime.fromtimestamp(item["dateModified"], tz=timezone.utc)
             return f'"{item['url']}",{date:%Y-%m-%d %H:%M:%S}'
+        if result_type == ResultType.Q5:
+            item = serializer.deserialize_q5_payload(payload)
+            return f'"{item["url"]}",{item["wordCount"]}'
         if result_type == ResultType.Q3:
             words = serializer.deserialize_q3_payload(payload)
             return "\n".join(words)
