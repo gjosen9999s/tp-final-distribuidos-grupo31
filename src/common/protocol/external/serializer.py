@@ -219,3 +219,12 @@ def serialize_q1_payload(url, date_modified):
 def deserialize_q1_payload(payload):
     reader = Reader(payload)
     return {"url": reader.string(), "dateModified": reader.uint32()}
+
+
+def serialize_q5_payload(url, word_count):
+    return serialize_string(url) + serialize_uint32(word_count)
+
+
+def deserialize_q5_payload(payload):
+    reader = Reader(payload)
+    return {"url": reader.string(), "wordCount": reader.uint32()}
