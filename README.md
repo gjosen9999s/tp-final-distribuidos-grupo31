@@ -6,28 +6,36 @@ TP Final Distribuidos - Grupo 31
 Todo desde **WSL o Git Bash** (el Makefile usa `/bin/bash`; en CMD no anda). Docker Desktop tiene que estar corriendo.
 
 ```bash
-# 1) generar los parquet de prueba (data/ no se versiona)
-make split-data
-
-# 2) levantar el sistema: ArticleHandler real + Q1 ×3 + 1 cliente
+# Levantar el sistema
 make up
+
 # Ctrl+C corta los logs; para bajar todo:
 make down
+
+# Borrar todas las salidas (no toca los controles)
+make clean
 ```
 
-`make up` procesa `data/input_1.parquet`; el cliente termina con **1.112** resultados.
+Los datos están organizados por cliente:
 
-Pruebas:
+```text
+data/client_1/input/
+data/client_1/output/
+data/client_1/output/img/
+data/client_1/control/
 
-```bash
-make e2e        # AH real + Q1 ×1 + 1 cliente          → 1.112
-make e2e-3-1    # AH real + Q1 ×1 + 3 clientes         → 1.111
-make e2e-3-2    # AH real + Q1 ×2 + 3 clientes         → 1.111
-make e2e-3-3    # AH real + Q1 ×3 + 3 clientes         → 1.111
-make q1-test    # Q1 con simulador (mock), sin AH real
+data/client_2/input/
+data/client_2/output/
+data/client_2/output/img/
+data/client_2/control/
+
+data/client_3/input/
+data/client_3/output/
+data/client_3/output/img/
+data/client_3/control/
 ```
 
-Los e2e de 3 clientes usan `data/e2e_1.parquet`, `data/e2e_2.parquet` y `data/e2e_3.parquet` (los genera `make split-data`).
+`make clean` borra `q*.txt`, `summary.txt` e imágenes de `output/`, pero deja intactos `input/` y `control/`.
 
 Si en WSL el build falla con `error getting credentials`, usá un config de Docker sin credential helper:
 

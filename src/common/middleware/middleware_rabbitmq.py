@@ -1,3 +1,5 @@
+import os
+
 import pika
 from .base_middleware import (
                         MessageMiddlewareCloseError,
@@ -8,6 +10,10 @@ from .base_middleware import (
                         )
 
 # Helpers 
+
+def _connection_parameters(host):
+    heartbeat = int(os.getenv("MOM_HEARTBEAT", "0"))
+    return pika.ConnectionParameters(host=host, heartbeat=heartbeat)
 
 # Wrapper para invocar el start_consuming dado que la funcion de callback no tiene los parametros requeridos por pika
 def _wrap_callback(channel, on_message_callback):
@@ -55,7 +61,7 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
         try:
             #conexion al host
             connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=host))
+            _connection_parameters(host))
 
             #canal
             channel = connection.channel()
@@ -173,7 +179,7 @@ class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
 
             #conexion al host
             connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=host))
+            _connection_parameters(host))
 
             #canal
             channel = connection.channel()
