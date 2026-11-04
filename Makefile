@@ -15,9 +15,13 @@ logs:
 .PHONY: logs
 
 clean:
-	if [ -d output ]; then find output -mindepth 1 -maxdepth 1 -exec rm -rf {} +; fi
-	for dir in data/client_*/output; do \
-		[ -d "$$dir" ] && find "$$dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +; \
-	done
-	mkdir -p data/client_1/output/img data/client_2/output/img data/client_3/output/img
+	rm -rf data/client_1/output
+	rm -rf data/client_2/output
+	rm -rf data/client_3/output
+
+	mkdir -p data/client_1/output/img
+	mkdir -p data/client_2/output/img
+	mkdir -p data/client_3/output/img
+
+	rm -rf output
 .PHONY: clean

@@ -12,17 +12,18 @@ parser.add_argument("input")
 
 args = parser.parse_args()
 
-FILENAME = args.input
+INPUT_FILE = Path(args.input)
+OUT_DIR = Path(__file__).resolve().parent / "analyzer" / "out"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-#FILENAME = "input_1.parquet"
-SUMMARY_FILE = FILENAME+".summ.txt"
-CONTROL_FILE_Q1 = FILENAME+".ctrl.q1.txt"
-CONTROL_FILE_Q2 = FILENAME+".ctrl.q2.txt"
-CONTROL_FILE_Q3 = FILENAME+".ctrl.q3.txt"
-CONTROL_FILE_Q4 = FILENAME+".ctrl.q4.txt"
-CONTROL_FILE_Q5 = FILENAME+".ctrl.q5.txt"
+SUMMARY_FILE = OUT_DIR / "summary.txt"
+CONTROL_FILE_Q1 = OUT_DIR / "q1.txt"
+CONTROL_FILE_Q2 = OUT_DIR / "q2.txt"
+CONTROL_FILE_Q3 = OUT_DIR / "q3.txt"
+CONTROL_FILE_Q4 = OUT_DIR / "q4.txt"
+CONTROL_FILE_Q5 = OUT_DIR / "q5.txt"
 
-df = pd.read_parquet("data/"+FILENAME)
+df = pd.read_parquet(INPUT_FILE)
 
 print(df.columns.tolist())
 
@@ -66,11 +67,11 @@ print("Q1:", len(q1))
 print(q1[["date_modified", "url"]].head())
 
 # Escritura archivo sumario de Q1
-with open("data/"+SUMMARY_FILE , "w", encoding="utf-8") as file:
+with open(SUMMARY_FILE , "w", encoding="utf-8") as file:
     file.write(f"Q1: {len(q1)}\n")
 
 # Escritura archivo de detalle de Q1 => "url",date_modified
-with open("data/"+CONTROL_FILE_Q1, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q1, "w", encoding="utf-8") as file:
     for i in range (len(q1)):
         file.write('"'+q1.iloc[i]["url"]+'"'+","+str(q1.iloc[i]["date_modified"])+"\n")
 
@@ -110,11 +111,11 @@ q2 = df_before_2020[(df_before_2020['has_biography_section'] == True)]
 
 
 # Escritura en archivo sumario de totales de Q2
-with open("data/"+SUMMARY_FILE , "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE , "a", encoding="utf-8") as file:
     file.write(f"Q2: {len(q2)}\n")
 
 # Escritura archivo de detalle de Q2 => name, date_modified, image(url)
-with open("data/"+CONTROL_FILE_Q2, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q2, "w", encoding="utf-8") as file:
     for i in range (len(q2)):
         file.write(f'{q2.iloc[i]["name"]},{q2.iloc[i]["date_modified"]},'
                    f'{q2.iloc[i]["image"]}\n'
@@ -146,11 +147,11 @@ french_words = fill_language_word_set(df, "fr")
 shared_words = english_words & french_words
 
 # Escritura en archivo sumario de totales de Q3
-with open("data/"+SUMMARY_FILE , "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE , "a", encoding="utf-8") as file:
     file.write(f"Q3: {len(shared_words)}\n")
 
 # Escritura archivo de detalle de Q3 => Palabras unicas compartidas entre todos los articulos en ingles/frances
-with open("data/"+CONTROL_FILE_Q3, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q3, "w", encoding="utf-8") as file:
     for word in sorted(shared_words):
         file.write(word+'\n')
 
@@ -164,11 +165,11 @@ q4 = pd.DataFrame(words_counter.most_common(TOP_SIZE),
                   columns=["word", "count"]
                   )
 # Escritura en archivo sumario de totales de Q4
-with open("data/" + SUMMARY_FILE, "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE, "a", encoding="utf-8") as file:
     file.write(f"Q4: {len(q4)}\n")
 
 # Escritura archivo de detalle de Q3 => TOP 20 de palabras, deduplicando palabras repetidas en un mismo abstract(articulo)
-with open("data/" + CONTROL_FILE_Q4, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q4, "w", encoding="utf-8") as file:
     for word, count in q4.itertuples(index=False, name=None): #para que no devuelva nro de registro y titulo de campo(named tuple)
         file.write(f"{word},{count}\n")
 
@@ -191,10 +192,10 @@ df_after_2020 ["abstract_word_count"] = df_after_2020 ["abstract"].apply(lambda 
 q5 = df_after_2020 [df_after_2020["abstract_word_count"] > df_avg_before_2020 ][["url","abstract_word_count"]]
 
 # Escritura en archivo sumario de totales de Q5
-with open("data/" + SUMMARY_FILE, "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE, "a", encoding="utf-8") as file:
     file.write(f"Q5: {len(q5)}\n")
 
-with open("data/" + CONTROL_FILE_Q5, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q5, "w", encoding="utf-8") as file:
     for url, wordcount in q5.itertuples(index=False, name=None): #para que no devuelva nro de registro y titulo de campo(named tuple)
         file.write(f"{url},{wordcount}\n")
 

@@ -25,6 +25,7 @@ class Tokenizer(Controller):
         super().__init__(*args, **kwargs)
 
         self.partitions = int(os.getenv("PARTITIONS", "1"))
+        self.q4_enabled = os.getenv("Q4_ENABLED", "1") != "0"
         mom_host = os.getenv("MOM_HOST", "localhost")
 
         # Una cola por particion para q3
@@ -33,11 +34,15 @@ class Tokenizer(Controller):
             for i in range(self.partitions)
         ]
 
-        # Una cola por particion para q4
-        self.q4_queues = [
-            MessageMiddlewareQueueRabbitMQ(mom_host, f"Q4_Words_{i}")
-            for i in range(self.partitions)
-        ]
+        # Una cola por particion para q4, solo si q4 esta habilitado.
+        self.q4_queues = (
+            [
+                MessageMiddlewareQueueRabbitMQ(mom_host, f"Q4_Words_{i}")
+                for i in range(self.partitions)
+            ]
+            if self.q4_enabled
+            else []
+        )
 
         # Palabras envidadas para cada cliente para cada cola
         self._counts = Counter()
@@ -70,14 +75,15 @@ class Tokenizer(Controller):
                     )
                 )
 
-                self.q4_queues[bucket].send(
-                    internal.serialize_word_q4_message(
-                        client_id, article.docId, word
+                if self.q4_enabled:
+                    self.q4_queues[bucket].send(
+                        internal.serialize_word_q4_message(
+                            client_id, article.docId, word
+                        )
                     )
-                )
+                    self._counts[(client_id, "q4", bucket)] += 1
 
                 self._counts[(client_id, "q3", bucket)] += 1
-                self._counts[(client_id, "q4", bucket)] += 1
 
             # El group cuenta los artículos procesados (EOF, PROGRESS, FLUSH).
             self.group.on_processed(client_id)
