@@ -221,6 +221,13 @@ def deserialize_q1_payload(payload):
     return {"url": reader.string(), "dateModified": reader.uint32()}
 
 
+def serialize_q2_payload(name, url, image):
+    return serialize_string(name) + serialize_string(url) + serialize_bytes(image)
+
+
+def deserialize_q2_payload(payload):
+    reader = Reader(payload)
+    return {"name": reader.string(), "url": reader.string(), "image": reader.bytes()}
 def serialize_q5_payload(url, word_count):
     return serialize_string(url) + serialize_uint32(word_count)
 

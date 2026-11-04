@@ -1,5 +1,6 @@
 """Entry point genérico de controllers (CONTROLLER_TYPE)."""
 import importlib
+import logging
 import os
 import signal
 import sys
@@ -65,6 +66,10 @@ def build(controller_type):
 
 
 def main():
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "INFO").upper(),
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     controller_type = os.getenv("CONTROLLER_TYPE")
     if not controller_type:
         raise SystemExit("Falta CONTROLLER_TYPE")
