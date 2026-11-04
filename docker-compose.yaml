@@ -21,7 +21,7 @@ services:
       MOM_HOST: rabbitmq
       RESULTS_QUEUE: QueryResults
       DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract
-      CONTROLLERS_COUNT: "3"
+      CONTROLLERS_COUNT: "4"
       LOGS_QUEUE: logs
     ports:
       - "5678:5678"
@@ -117,9 +117,121 @@ services:
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
-      CONTROLLER_COUNT: "1"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "0"
-      PARTITIONS: "1"
+      PARTITIONS: "3"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer_1:
+    build: .
+    container_name: tokenizer_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q34_Abstract
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
+      NODE_ID: "1"
+      PARTITIONS: "3"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer_2:
+    build: .
+    container_name: tokenizer_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q34_Abstract
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
+      NODE_ID: "2"
+      PARTITIONS: "3"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_0:
+    build: .
+    container_name: q3_reduce_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q3_Words_0
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_0
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "3"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_1:
+    build: .
+    container_name: q3_reduce_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q3_Words_1
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_1
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "3"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_2:
+    build: .
+    container_name: q3_reduce_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q3_Words_2
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_2
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "3"
+      NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_join:
+    build: .
+    container_name: q3_join
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_join
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q3_Shared
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_join
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      PARTITIONS: "3"
+      NODE_ID: "0"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -144,16 +256,16 @@ services:
     container_name: client_1
     command: ["python", "-m", "client.main"]
     environment:
-      INPUT_FILE:       /data/input_1.parquet
-      SUMMARY_FILE:     /output/input_1.summary.txt
-      OUTPUT_FILE_Q1:   /output/input_1.output2.q1.txt
-      OUTPUT_FILE_Q2:   /output/input_1.output2.q2.txt
-      OUTPUT_FILE_Q3:   /output/input_1.output2.q3.txt
-      OUTPUT_FILE_Q4:   /output/input_1.output2.q4.txt
-      OUTPUT_FILE_Q5:   /output/input_1.output2.q5.txt
+      INPUT_FILE:       /data/wiki_sample_small.parquet
+      SUMMARY_FILE:     /output/wiki_sample_small.summary.txt
+      OUTPUT_FILE_Q1:   /output/wiki_sample_small.output.q1.txt
+      OUTPUT_FILE_Q2:   /output/wiki_sample_small.output.q2.txt
+      OUTPUT_FILE_Q3:   /output/wiki_sample_small.output.q3.txt
+      OUTPUT_FILE_Q4:   /output/wiki_sample_small.output.q4.txt
+      OUTPUT_FILE_Q5:   /output/wiki_sample_small.output.q5.txt
       SERVER_HOST: article_handler
       SERVER_PORT: "5678"
-      TIMEOUT: "240"
+      TIMEOUT: "300"
     volumes:
       - ./data:/data
       - ./output:/output

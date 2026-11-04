@@ -114,7 +114,7 @@ class Q5Accumulator(Controller):
 
     def _send_done(self, client_id, _quantity):
         # Cada nodo Accumulator emite su parcial (sum, count)
-        # y su DONE hacia la cola Q5_Cand de los Q5_AVG_Filter.
+        # y su DONE hacia la cola Q5_Acc_Partial de los Q5_AVG_Filter.
         self.out_mw.send(
             internal.serialize_q5_acc_partial(
                 client_id,

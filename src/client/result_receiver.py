@@ -57,10 +57,15 @@ class ResultReceiver:
 
         detail = self._describe(data.get("resultType"), data.get("payload", b""))
 
-        # Incremento de total x query y escritura de archivo de salida para la query en cuestion
+        # El summary cuenta filas lógicas, no mensajes:
+        # Q1 suma 1 por artículo; Q3 suma 1 por palabra; Q4/Q5 una por fila.
         if resultType and resultType > 0:
-            self._results_by_query_type[resultType] = self._results_by_query_type.get(resultType, 0) + 1 
-            self._filehandlers.get(f"q{resultType}").write(detail+"\n")
+            cantidad = detail.count("\n") + 1 if detail else 0
+            self._results_by_query_type[resultType] = (
+                self._results_by_query_type.get(resultType, 0) + cantidad
+            )
+            if detail:
+                self._filehandlers.get(f"q{resultType}").write(detail + "\n")
 
         logger.info(
             f"Resultado [{self._results_received}] Q{data.get('resultType')} "
@@ -78,6 +83,12 @@ class ResultReceiver:
         if result_type == ResultType.Q2:
             item = serializer.deserialize_q2_payload(payload)
             return f'"{item["name"]}","{item["url"]}",{len(item["image"])} bytes'
+        if result_type == ResultType.Q5:
+            item = serializer.deserialize_q5_payload(payload)
+            return f'"{item["url"]}",{item["wordCount"]}'
+        if result_type == ResultType.Q3:
+            words = serializer.deserialize_q3_payload(payload)
+            return "\n".join(words)
         return f"{len(payload)} bytes (sin decodificar)"
 
     def receive_until_last(self) -> None:
