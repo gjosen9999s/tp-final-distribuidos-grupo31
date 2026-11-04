@@ -8,7 +8,12 @@ import socket
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from common.protocol.constants import ExternalType, FLAG_IS_SESSION_END, ResultType
+from common.protocol.constants import (
+    ExternalType,
+    FLAG_IS_LAST_PART,
+    FLAG_IS_SESSION_END,
+    ResultType,
+)
 from common.protocol.external import framing, serializer
 
 logger = logging.getLogger(__name__)
@@ -30,6 +35,7 @@ class ResultReceiver:
         self._results_received: int = 0
         self._results_by_query_type: Dict[int, int]={}
         self._filehandlers: Dict[str,Any]={}
+        self._partial_results: Dict[int, list] = {}
 
         for filetype, filename in outfiles.items():
             self._filehandlers[filetype]=open(filename, "w", encoding="utf-8")
@@ -38,10 +44,17 @@ class ResultReceiver:
         """
         Procesa de manera individual cada resultado retornado por el clúster.
         """
-        
-        self._results_received += 1
         resultType=data.get("resultType")
-       
+
+        if resultType == ResultType.Q2:
+            parts = self._partial_results.setdefault(data["docId"], [])
+            parts.append(data.get("payload", b""))
+            if not data["flags"] & FLAG_IS_LAST_PART:
+                return
+            data = {**data, "payload": b"".join(self._partial_results.pop(data["docId"]))}
+
+        self._results_received += 1
+
         detail = self._describe(data.get("resultType"), data.get("payload", b""))
 
         # Incremento de total x query y escritura de archivo de salida para la query en cuestion
@@ -62,6 +75,9 @@ class ResultReceiver:
             item = serializer.deserialize_q1_payload(payload)
             date = datetime.fromtimestamp(item["dateModified"], tz=timezone.utc)
             return f'"{item['url']}",{date:%Y-%m-%d %H:%M:%S}'
+        if result_type == ResultType.Q2:
+            item = serializer.deserialize_q2_payload(payload)
+            return f'"{item["name"]}","{item["url"]}",{len(item["image"])} bytes'
         return f"{len(payload)} bytes (sin decodificar)"
 
     def receive_until_last(self) -> None:

@@ -20,7 +20,7 @@ services:
       SERVER_PORT: "5678"
       MOM_HOST: rabbitmq
       RESULTS_QUEUE: QueryResults
-      DATA_QUEUES: Q1_Metadata,Q34_Abstract
+      DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract
       CONTROLLERS_COUNT: "3"
       LOGS_QUEUE: logs
     ports:
@@ -84,6 +84,24 @@ services:
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "3"
       NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q2_0:
+    build: .
+    container_name: q2_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q2_filter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q2_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q2_filter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      NODE_ID: "0"
     depends_on:
       rabbitmq:
         condition: service_healthy

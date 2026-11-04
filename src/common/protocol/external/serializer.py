@@ -219,3 +219,12 @@ def serialize_q1_payload(url, date_modified):
 def deserialize_q1_payload(payload):
     reader = Reader(payload)
     return {"url": reader.string(), "dateModified": reader.uint32()}
+
+
+def serialize_q2_payload(name, url, image):
+    return serialize_string(name) + serialize_string(url) + serialize_bytes(image)
+
+
+def deserialize_q2_payload(payload):
+    reader = Reader(payload)
+    return {"name": reader.string(), "url": reader.string(), "image": reader.bytes()}
