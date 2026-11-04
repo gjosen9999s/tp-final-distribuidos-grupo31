@@ -219,3 +219,11 @@ def serialize_q1_payload(url, date_modified):
 def deserialize_q1_payload(payload):
     reader = Reader(payload)
     return {"url": reader.string(), "dateModified": reader.uint32()}
+
+
+def serialize_q3_payload(words):
+    return serialize_list(words, serialize_string)
+
+
+def deserialize_q3_payload(payload):
+    return Reader(payload).list(lambda reader: reader.string())
