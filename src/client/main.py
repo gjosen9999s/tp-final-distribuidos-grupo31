@@ -10,7 +10,7 @@ import socket
 import sys
 from dataclasses import dataclass,field
 from types import FrameType
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from client.batch_sender import BatchSender
 from client.parquet_reader import ParquetReader
@@ -24,6 +24,18 @@ logging.basicConfig(
 logger = logging.getLogger("main")
 
 
+DEFAULT_PARQUET_COLUMNS = [
+    "identifier",
+    "name",
+    "url",
+    "date_modified",
+    "in_language",
+    "sections",
+    "abstract",
+    "image",
+]
+
+
 @dataclass
 class ClientConfig:
     """Validacion de configuracion"""
@@ -33,6 +45,8 @@ class ClientConfig:
     timeout: float
     output_files: Dict [str,str]=field(default_factory=dict)
     image_dir: str | None = None
+    columns: List[str]=field(default_factory=lambda: list(DEFAULT_PARQUET_COLUMNS))
+    batch_size: int = 1000
 
     @classmethod
     def from_env_and_args(cls) -> "ClientConfig":
@@ -48,6 +62,8 @@ class ClientConfig:
         parser.add_argument("--output4", default=os.getenv("OUTPUT_FILE_Q4"))
         parser.add_argument("--output5", default=os.getenv("OUTPUT_FILE_Q5"))
         parser.add_argument("--img-dir", default=os.getenv("OUTPUT_IMG_DIR"))
+        parser.add_argument("--batch-size", type=int, default=int(os.getenv("BATCH_SIZE", "1000")))
+        parser.add_argument("--columns", default=os.getenv("PARQUET_COLUMNS"))
 
         args = parser.parse_args()
 
@@ -67,13 +83,20 @@ class ClientConfig:
             "q5": args.output5,
             }
 
+        if args.columns:
+            columns = [c.strip() for c in args.columns.split(",") if c.strip()]
+        else:
+            columns = list(DEFAULT_PARQUET_COLUMNS)
+
         return cls(
             input_file=args.input,
             server_host=args.host,
             server_port=args.port,
             timeout=args.timeout,
             output_files=output_files,
-            image_dir=args.img_dir
+            image_dir=args.img_dir,
+            columns=columns,
+            batch_size=args.batch_size,
         )
 
 
@@ -132,7 +155,7 @@ def main() -> int:
             config.timeout
         )
 
-        reader = ParquetReader(config.input_file)
+        reader = ParquetReader(config.input_file, batch_size=config.batch_size, columns=config.columns)
         
         # El mismo socket para envio y recepcion
         sender = BatchSender(shared_socket)
