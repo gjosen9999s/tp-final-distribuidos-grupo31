@@ -100,7 +100,10 @@ class Q2Filter(Controller):
 
     def _send_result(self, client_id, article, image):
         payload = external.serialize_q2_payload(
-            article.name or "", article.url, image or b""
+            article.name or "",
+            article.url,
+            article.imageUrl or "",
+            image or b"",
         )
         parts = [
             payload[i : i + self.chunk_size]
