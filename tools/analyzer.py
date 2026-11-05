@@ -1,10 +1,13 @@
 import argparse
 import collections
+import hashlib
 import json
 from nltk.corpus import stopwords
 import pandas as pd
 from pathlib import Path
 import re
+import urllib.request
+from urllib.parse import unquote, urlparse
 
 
 parser = argparse.ArgumentParser()
@@ -13,8 +16,9 @@ parser.add_argument("input")
 args = parser.parse_args()
 
 INPUT_FILE = Path(args.input)
-OUT_DIR = Path(__file__).resolve().parent / "analyzer" / "out"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+OUT_DIR = Path("tools/analyzer/out")
+
+print(f"Analizando: {INPUT_FILE}", flush=True)
 
 SUMMARY_FILE = OUT_DIR / "summary.txt"
 CONTROL_FILE_Q1 = OUT_DIR / "q1.txt"
@@ -23,21 +27,18 @@ CONTROL_FILE_Q3 = OUT_DIR / "q3.txt"
 CONTROL_FILE_Q4 = OUT_DIR / "q4.txt"
 CONTROL_FILE_Q5 = OUT_DIR / "q5.txt"
 
-df = pd.read_parquet(INPUT_FILE)
+NEEDED_COLUMNS = [
+    "abstract",
+    "date_modified",
+    "identifier",
+    "image",
+    "in_language",
+    "name",
+    "sections",
+    "url",
+]
 
-print(df.columns.tolist())
-
-#['abstract', 'additional_entities', 'date_created', 'date_modified', 
-# 'description', 'event', 'identifier', 'image', 'in_language', 
-# 'infoboxes', 'is_part_of', 'license', 'main_entity', 'name', 
-# 'references', 'sections', 'tables', 'url', 'version']
-
-COLUMNS_TO_DROP = ['additional_entities', 'date_created',
-       'description', 'event', 'identifier',
-       'infoboxes', 'is_part_of', 'license', 'main_entity',
-       'references', 'tables', 'version']
-
-df=df.drop(columns=COLUMNS_TO_DROP)
+df = pd.read_parquet(INPUT_FILE, columns=NEEDED_COLUMNS)
 
 print(df.columns.tolist())
 print(df.shape)
@@ -75,6 +76,8 @@ with open(CONTROL_FILE_Q1, "w", encoding="utf-8") as file:
     for i in range (len(q1)):
         file.write('"'+q1.iloc[i]["url"]+'"'+","+str(q1.iloc[i]["date_modified"])+"\n")
 
+print("Q1 listo", flush=True)
+
 # Helper para modificar la columna content_url {'content_url': 'url'} => url
 def image_object_to_url(image):
     if not isinstance(image, dict):
@@ -83,6 +86,44 @@ def image_object_to_url(image):
 
 # Aplico el formateo a la columna
 df["image"] = df["image"].apply(image_object_to_url)
+
+USER_AGENT = "tp-final-distribuidos-grupo31/1.0"
+MAX_IMAGE_BYTES = 16 * 1024 * 1024
+
+
+def image_filename(url, doc_id):
+    if not isinstance(url, str) or not url:
+        return ""
+
+    original_name = Path(unquote(urlparse(url).path)).name
+    if not original_name:
+        original_name = "image.img"
+
+    original_name = Path(original_name).name
+    if not Path(original_name).suffix:
+        original_name += ".img"
+
+    prefix = doc_id if doc_id is not None else "unknown"
+    return f"{prefix}_{original_name}"
+
+
+def image_sha256(url):
+    if not isinstance(url, str) or not url:
+        return ""
+
+    try:
+        request = urllib.request.Request(
+            url, headers={"User-Agent": USER_AGENT}
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            data = response.read(MAX_IMAGE_BYTES + 1)
+
+        if len(data) > MAX_IMAGE_BYTES:
+            return ""
+
+        return hashlib.sha256(data).hexdigest()
+    except Exception:
+        return ""
 
 
 
@@ -114,12 +155,17 @@ q2 = df_before_2020[(df_before_2020['has_biography_section'] == True)]
 with open(SUMMARY_FILE , "a", encoding="utf-8") as file:
     file.write(f"Q2: {len(q2)}\n")
 
-# Escritura archivo de detalle de Q2 => name, date_modified, image(url)
+# Escritura archivo de detalle de Q2 => "name","article_url","image_name",sha256
 with open(CONTROL_FILE_Q2, "w", encoding="utf-8") as file:
     for i in range (len(q2)):
-        file.write(f'{q2.iloc[i]["name"]},{q2.iloc[i]["date_modified"]},'
-                   f'{q2.iloc[i]["image"]}\n'
+        image_url = q2.iloc[i]["image"]
+        image_hash = image_sha256(image_url)
+        image_name = image_filename(image_url, q2.iloc[i]["identifier"])
+        file.write(f'"{q2.iloc[i]["name"]}","{q2.iloc[i]["url"]}",'
+                   f'"{image_name}",{image_hash}\n'
                    )
+
+print("Q2 listo", flush=True)
 
 
 # Stop Words de ingles y frances (set)
@@ -155,6 +201,8 @@ with open(CONTROL_FILE_Q3, "w", encoding="utf-8") as file:
     for word in sorted(shared_words):
         file.write(word+'\n')
 
+print("Q3 listo", flush=True)
+
 TOP_SIZE = 20
 words_counter = collections.Counter()
 for abstract in df['abstract'].dropna():
@@ -172,6 +220,8 @@ with open(SUMMARY_FILE, "a", encoding="utf-8") as file:
 with open(CONTROL_FILE_Q4, "w", encoding="utf-8") as file:
     for word, count in q4.itertuples(index=False, name=None): #para que no devuelva nro de registro y titulo de campo(named tuple)
         file.write(f"{word},{count}\n")
+
+print("Q4 listo", flush=True)
 
 
 # Creo una copia con solo los que tienen año de modificacion > 2020 
@@ -197,7 +247,9 @@ with open(SUMMARY_FILE, "a", encoding="utf-8") as file:
 
 with open(CONTROL_FILE_Q5, "w", encoding="utf-8") as file:
     for url, wordcount in q5.itertuples(index=False, name=None): #para que no devuelva nro de registro y titulo de campo(named tuple)
-        file.write(f"{url},{wordcount}\n")
+        file.write(f'"{url}",{wordcount}\n')
+
+print("Q5 listo", flush=True)
 
 
 

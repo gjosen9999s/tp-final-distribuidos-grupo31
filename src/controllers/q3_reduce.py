@@ -1,5 +1,6 @@
 """Q3 Reduce: palabras vistas al menos una vez en inglés y en francés."""
 
+import logging
 import os
 from dataclasses import dataclass, field
 
@@ -15,6 +16,9 @@ from common.protocol.constants import (
 from common.protocol.control import serializer as control
 from common.protocol.internal import serializer as internal
 from controllers.base.controller import Controller
+
+logger = logging.getLogger("q3_reduce")
+PROGRESS_EVERY = 100000
 
 
 # Estado de un cliente dentro de esta particion
@@ -40,6 +44,12 @@ class Q3Reduce(Controller):
 
         # Estado x cliente, se crea cuando llega.
         self._states = {}
+
+        logger.info(
+            "START node=%s tokenizers=%s",
+            self.node_id,
+            self.tokenizers,
+        )
 
     def _state(self, client_id):
         state = self._states.get(client_id)
@@ -79,6 +89,17 @@ class Q3Reduce(Controller):
             elif in_language == LANG_FR:
                 state.fr_words.add(word)
 
+            if state.processed % PROGRESS_EVERY == 0:
+                logger.info(
+                    "PROGRESS client=%s node=%s processed=%s total=%s dones=%s/%s",
+                    client_id,
+                    self.node_id,
+                    state.processed,
+                    state.total,
+                    len(state.dones),
+                    self.tokenizers,
+                )
+
             self._emit_if_ready(client_id, state)
 
     def _handle_done(self, msg_type, client_id, message):
@@ -102,6 +123,17 @@ class Q3Reduce(Controller):
 
             state.dones.add(key)
             state.total += message["quantity"]
+            logger.info(
+                "DONE client=%s node=%s from=%s qty=%s dones=%s/%s total=%s processed=%s",
+                client_id,
+                self.node_id,
+                message["nodeId"],
+                message["quantity"],
+                len(state.dones),
+                self.tokenizers,
+                state.total,
+                state.processed,
+            )
             self._emit_if_ready(client_id, state)
 
     def _emit_if_ready(self, client_id, state):
@@ -119,6 +151,15 @@ class Q3Reduce(Controller):
         # Se envia resultado parcial de este nodo y el DONE
 
         words = sorted(state.en_words & state.fr_words)
+        logger.info(
+            "EMIT client=%s node=%s words=%s processed=%s total=%s dones=%s",
+            client_id,
+            self.node_id,
+            len(words),
+            state.processed,
+            state.total,
+            len(state.dones),
+        )
 
         self.out_mw.send(
             internal.serialize_q3_partial_message(client_id, words)

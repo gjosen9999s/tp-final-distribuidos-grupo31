@@ -1,5 +1,6 @@
 """Q3 Join: junta los parciales de todas las particiones."""
 
+import logging
 import os
 from dataclasses import dataclass, field
 
@@ -16,6 +17,8 @@ from common.protocol.control import serializer as control
 from common.protocol.external import serializer as external
 from common.protocol.internal import serializer as internal
 from controllers.base.controller import Controller
+
+logger = logging.getLogger("q3_join")
 
 
 
@@ -37,6 +40,12 @@ class Q3Join(Controller):
         # Tiene que coincidir con la cantidad de nodos Q3 Reduce
         self.partitions = max(1, int(os.getenv("PARTITIONS", "1")))
         self._states = {}
+
+        logger.info(
+            "START node=%s partitions=%s",
+            self.node_id,
+            self.partitions,
+        )
 
     def _state(self, client_id):
         state = self._states.get(client_id)
@@ -70,6 +79,12 @@ class Q3Join(Controller):
 
             # Un parcial por cada partición. No importa el orden en que lleguen.
             state.partials.append(words)
+            logger.info(
+                "PARTIAL client=%s partials=%s/%s",
+                client_id,
+                len(state.partials),
+                self.partitions,
+            )
             self._emit_if_ready(client_id, state)
 
     def _handle_done(self, msg_type, client_id, message):
@@ -91,6 +106,13 @@ class Q3Join(Controller):
                 return
 
             state.dones.add(node_id)
+            logger.info(
+                "DONE client=%s node=%s dones=%s/%s",
+                client_id,
+                node_id,
+                len(state.dones),
+                self.partitions,
+            )
             self._emit_if_ready(client_id, state)
 
     def _emit_if_ready(self, client_id, state):
@@ -109,6 +131,13 @@ class Q3Join(Controller):
         for partial in state.partials:
             words.extend(partial)
         words = sorted(words)
+        logger.info(
+            "RESULT client=%s words=%s partials=%s dones=%s",
+            client_id,
+            len(words),
+            len(state.partials),
+            len(state.dones),
+        )
 
         payload = external.serialize_q3_payload(words)
         self.out_mw.send(
