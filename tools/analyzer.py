@@ -1,10 +1,14 @@
 import argparse
 import collections
+import hashlib
 import json
 from nltk.corpus import stopwords
 import pandas as pd
 from pathlib import Path
 import re
+from urllib.parse import unquote, urlparse
+
+from controllers.image_downloader.wikimedia_client import WikimediaClient
 
 
 parser = argparse.ArgumentParser()
@@ -12,31 +16,30 @@ parser.add_argument("input")
 
 args = parser.parse_args()
 
-FILENAME = args.input
+INPUT_FILE = Path(args.input)
+OUT_DIR = Path(__file__).resolve().parent / "analyzer" / "out"
 
-#FILENAME = "input_1.parquet"
-SUMMARY_FILE = FILENAME+".summ.txt"
-CONTROL_FILE_Q1 = FILENAME+".ctrl.q1.txt"
-CONTROL_FILE_Q2 = FILENAME+".ctrl.q2.txt"
-CONTROL_FILE_Q3 = FILENAME+".ctrl.q3.txt"
-CONTROL_FILE_Q4 = FILENAME+".ctrl.q4.txt"
-CONTROL_FILE_Q5 = FILENAME+".ctrl.q5.txt"
+print(f"Analizando: {INPUT_FILE}", flush=True)
 
-df = pd.read_parquet("data/"+FILENAME)
+SUMMARY_FILE = OUT_DIR / "summary.txt"
+CONTROL_FILE_Q1 = OUT_DIR / "q1.txt"
+CONTROL_FILE_Q2 = OUT_DIR / "q2.txt"
+CONTROL_FILE_Q3 = OUT_DIR / "q3.txt"
+CONTROL_FILE_Q4 = OUT_DIR / "q4.txt"
+CONTROL_FILE_Q5 = OUT_DIR / "q5.txt"
 
-print(df.columns.tolist())
+NEEDED_COLUMNS = [
+    "abstract",
+    "date_modified",
+    "identifier",
+    "image",
+    "in_language",
+    "name",
+    "sections",
+    "url",
+]
 
-#['abstract', 'additional_entities', 'date_created', 'date_modified', 
-# 'description', 'event', 'identifier', 'image', 'in_language', 
-# 'infoboxes', 'is_part_of', 'license', 'main_entity', 'name', 
-# 'references', 'sections', 'tables', 'url', 'version']
-
-COLUMNS_TO_DROP = ['additional_entities', 'date_created',
-       'description', 'event', 'identifier',
-       'infoboxes', 'is_part_of', 'license', 'main_entity',
-       'references', 'tables', 'version']
-
-df=df.drop(columns=COLUMNS_TO_DROP)
+df = pd.read_parquet(INPUT_FILE, columns=NEEDED_COLUMNS)
 
 print(df.columns.tolist())
 print(df.shape)
@@ -66,13 +69,15 @@ print("Q1:", len(q1))
 print(q1[["date_modified", "url"]].head())
 
 # Escritura archivo sumario de Q1
-with open("data/"+SUMMARY_FILE , "w", encoding="utf-8") as file:
+with open(SUMMARY_FILE , "w", encoding="utf-8") as file:
     file.write(f"Q1: {len(q1)}\n")
 
 # Escritura archivo de detalle de Q1 => "url",date_modified
-with open("data/"+CONTROL_FILE_Q1, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q1, "w", encoding="utf-8") as file:
     for i in range (len(q1)):
         file.write('"'+q1.iloc[i]["url"]+'"'+","+str(q1.iloc[i]["date_modified"])+"\n")
+
+print("Q1 listo", flush=True)
 
 # Helper para modificar la columna content_url {'content_url': 'url'} => url
 def image_object_to_url(image):
@@ -82,6 +87,29 @@ def image_object_to_url(image):
 
 # Aplico el formateo a la columna
 df["image"] = df["image"].apply(image_object_to_url)
+
+image_client = WikimediaClient()
+
+
+def image_filename(url, doc_id):
+    if not isinstance(url, str) or not url:
+        return ""
+
+    original_name = Path(unquote(urlparse(url).path)).name
+    if not original_name:
+        original_name = "image.img"
+
+    original_name = Path(original_name).name
+    if not Path(original_name).suffix:
+        original_name += ".img"
+
+    prefix = doc_id if doc_id is not None else "unknown"
+    return f"{prefix}_{original_name}"
+
+
+def image_sha256(url):
+    data = image_client.download(url)
+    return hashlib.sha256(data).hexdigest() if data else ""
 
 
 
@@ -110,15 +138,20 @@ q2 = df_before_2020[(df_before_2020['has_biography_section'] == True)]
 
 
 # Escritura en archivo sumario de totales de Q2
-with open("data/"+SUMMARY_FILE , "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE , "a", encoding="utf-8") as file:
     file.write(f"Q2: {len(q2)}\n")
 
-# Escritura archivo de detalle de Q2 => name, date_modified, image(url)
-with open("data/"+CONTROL_FILE_Q2, "w", encoding="utf-8") as file:
+# Escritura archivo de detalle de Q2 => "name","article_url","image_name",sha256
+with open(CONTROL_FILE_Q2, "w", encoding="utf-8") as file:
     for i in range (len(q2)):
-        file.write(f'{q2.iloc[i]["name"]},{q2.iloc[i]["date_modified"]},'
-                   f'{q2.iloc[i]["image"]}\n'
+        image_url = q2.iloc[i]["image"]
+        image_hash = image_sha256(image_url)
+        image_name = image_filename(image_url, q2.iloc[i]["identifier"])
+        file.write(f'"{q2.iloc[i]["name"]}","{q2.iloc[i]["url"]}",'
+                   f'"{image_name}",{image_hash}\n'
                    )
+
+print("Q2 listo", flush=True)
 
 
 # Stop Words de ingles y frances (set)
@@ -146,13 +179,15 @@ french_words = fill_language_word_set(df, "fr")
 shared_words = english_words & french_words
 
 # Escritura en archivo sumario de totales de Q3
-with open("data/"+SUMMARY_FILE , "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE , "a", encoding="utf-8") as file:
     file.write(f"Q3: {len(shared_words)}\n")
 
 # Escritura archivo de detalle de Q3 => Palabras unicas compartidas entre todos los articulos en ingles/frances
-with open("data/"+CONTROL_FILE_Q3, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q3, "w", encoding="utf-8") as file:
     for word in sorted(shared_words):
         file.write(word+'\n')
+
+print("Q3 listo", flush=True)
 
 TOP_SIZE = 20
 words_counter = collections.Counter()
@@ -164,13 +199,15 @@ q4 = pd.DataFrame(words_counter.most_common(TOP_SIZE),
                   columns=["word", "count"]
                   )
 # Escritura en archivo sumario de totales de Q4
-with open("data/" + SUMMARY_FILE, "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE, "a", encoding="utf-8") as file:
     file.write(f"Q4: {len(q4)}\n")
 
 # Escritura archivo de detalle de Q3 => TOP 20 de palabras, deduplicando palabras repetidas en un mismo abstract(articulo)
-with open("data/" + CONTROL_FILE_Q4, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q4, "w", encoding="utf-8") as file:
     for word, count in q4.itertuples(index=False, name=None): #para que no devuelva nro de registro y titulo de campo(named tuple)
         file.write(f"{word},{count}\n")
+
+print("Q4 listo", flush=True)
 
 
 # Creo una copia con solo los que tienen año de modificacion > 2020 
@@ -191,12 +228,14 @@ df_after_2020 ["abstract_word_count"] = df_after_2020 ["abstract"].apply(lambda 
 q5 = df_after_2020 [df_after_2020["abstract_word_count"] > df_avg_before_2020 ][["url","abstract_word_count"]]
 
 # Escritura en archivo sumario de totales de Q5
-with open("data/" + SUMMARY_FILE, "a", encoding="utf-8") as file:
+with open(SUMMARY_FILE, "a", encoding="utf-8") as file:
     file.write(f"Q5: {len(q5)}\n")
 
-with open("data/" + CONTROL_FILE_Q5, "w", encoding="utf-8") as file:
+with open(CONTROL_FILE_Q5, "w", encoding="utf-8") as file:
     for url, wordcount in q5.itertuples(index=False, name=None): #para que no devuelva nro de registro y titulo de campo(named tuple)
-        file.write(f"{url},{wordcount}\n")
+        file.write(f'"{url}",{wordcount}\n')
+
+print("Q5 listo", flush=True)
 
 
 

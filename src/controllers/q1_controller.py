@@ -1,5 +1,8 @@
 """Q1: artículos en inglés hasta 2020."""
 
+import logging
+from collections import Counter
+
 from common.middleware.group import GroupCoordinator
 from common.protocol.constants import (
     CTRL_Q1,
@@ -12,10 +15,15 @@ from common.protocol.external import serializer as external
 from common.protocol.internal import serializer as internal
 from controllers.base.controller import Controller
 
+logger = logging.getLogger("q1")
+PROGRESS_EVERY = 5000
+
 
 class Q1Controller(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._seen = Counter()
+        self._matched = Counter()
         self.group = GroupCoordinator(
             controller_type=CTRL_Q1,
             node_id=self.node_id,
@@ -25,7 +33,19 @@ class Q1Controller(Controller):
             done_sender=self._send_done,
         )
 
+        logger.info(
+            "START node=%s/%s",
+            self.node_id,
+            self.controller_count,
+        )
+
     def _send_done(self, client_id, quantity):
+        logger.info(
+            "DONE client=%s node=%s emitted=%s",
+            client_id,
+            self.node_id,
+            quantity,
+        )
         self.out_mw.send(
             control.serialize_done(client_id, CTRL_Q1, self.node_id, quantity)
         )
@@ -36,8 +56,17 @@ class Q1Controller(Controller):
             if self.group.is_closed(client_id):
                 return
 
+            self._seen[client_id] += 1
+
             if self._matches(article):
-                # Q1: cada artículo que matchea es un resultado completo.
+                self._matched[client_id] += 1
+                # Q1: cada art��culo que matchea es un resultado completo.
+                logger.debug(
+                    "MATCH client=%s node=%s doc=%s",
+                    client_id,
+                    self.node_id,
+                    article.docId,
+                )
                 self.group.add_emitted(client_id)
                 payload = external.serialize_q1_payload(
                     article.url, article.dateModified
@@ -56,6 +85,15 @@ class Q1Controller(Controller):
             # El group cuenta TODO lo que entra (matchee o no) y reporta
             # cada B; en modo FLUSH reporta cada mensaje.
             self.group.on_processed(client_id)
+
+            if self._seen[client_id] % PROGRESS_EVERY == 0:
+                logger.info(
+                    "PROGRESS client=%s node=%s seen=%s matched=%s",
+                    client_id,
+                    self.node_id,
+                    self._seen[client_id],
+                    self._matched[client_id],
+                )
 
     def handle_control(self, msg_type, client_id, message, from_control):
         with self._lock:

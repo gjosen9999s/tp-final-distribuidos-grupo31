@@ -97,7 +97,9 @@ class ResultReceiver:
             return f'"{item['url']}",{date:%Y-%m-%d %H:%M:%S}'
         if result_type == ResultType.Q2:
             item = serializer.deserialize_q2_payload(payload)
-            image_path = self._save_q2_image(doc_id, item["image"], item["url"])
+            image_path = self._save_q2_image(
+                doc_id, item["image"], item["imageUrl"]
+            )
             if image_path:
                 return f'"{item["name"]}","{item["url"]}","{image_path}"'
             return f'"{item["name"]}","{item["url"]}",{len(item["image"])} bytes'
