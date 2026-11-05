@@ -158,7 +158,7 @@ services:
       MOM_HOST: rabbitmq
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q34_Abstract
-      Q4_ENABLED: "0"
+      Q4_ENABLED: "1"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
