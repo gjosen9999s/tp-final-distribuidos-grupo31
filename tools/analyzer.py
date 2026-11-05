@@ -6,8 +6,9 @@ from nltk.corpus import stopwords
 import pandas as pd
 from pathlib import Path
 import re
-import urllib.request
 from urllib.parse import unquote, urlparse
+
+from controllers.image_downloader.wikimedia_client import WikimediaClient
 
 
 parser = argparse.ArgumentParser()
@@ -16,7 +17,7 @@ parser.add_argument("input")
 args = parser.parse_args()
 
 INPUT_FILE = Path(args.input)
-OUT_DIR = Path("tools/analyzer/out")
+OUT_DIR = Path(__file__).resolve().parent / "analyzer" / "out"
 
 print(f"Analizando: {INPUT_FILE}", flush=True)
 
@@ -87,8 +88,7 @@ def image_object_to_url(image):
 # Aplico el formateo a la columna
 df["image"] = df["image"].apply(image_object_to_url)
 
-USER_AGENT = "tp-final-distribuidos-grupo31/1.0"
-MAX_IMAGE_BYTES = 16 * 1024 * 1024
+image_client = WikimediaClient()
 
 
 def image_filename(url, doc_id):
@@ -108,22 +108,8 @@ def image_filename(url, doc_id):
 
 
 def image_sha256(url):
-    if not isinstance(url, str) or not url:
-        return ""
-
-    try:
-        request = urllib.request.Request(
-            url, headers={"User-Agent": USER_AGENT}
-        )
-        with urllib.request.urlopen(request, timeout=20) as response:
-            data = response.read(MAX_IMAGE_BYTES + 1)
-
-        if len(data) > MAX_IMAGE_BYTES:
-            return ""
-
-        return hashlib.sha256(data).hexdigest()
-    except Exception:
-        return ""
+    data = image_client.download(url)
+    return hashlib.sha256(data).hexdigest() if data else ""
 
 
 
