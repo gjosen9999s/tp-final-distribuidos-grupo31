@@ -178,7 +178,7 @@ services:
       MOM_HOST: rabbitmq
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q34_Abstract
-      Q4_ENABLED: "0"
+      Q4_ENABLED: "1"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
@@ -198,7 +198,7 @@ services:
       MOM_HOST: rabbitmq
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q34_Abstract
-      Q4_ENABLED: "0"
+      Q4_ENABLED: "1"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
@@ -218,7 +218,7 @@ services:
       MOM_HOST: rabbitmq
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q34_Abstract
-      Q4_ENABLED: "0"
+      Q4_ENABLED: "1"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
@@ -444,7 +444,7 @@ services:
       CONTROL_KEY: q4_counter_0
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "1"
-      TOKENIZER_COUNT: "3"
+      TOKENIZER_COUNT: "4"
       NODE_ID: "0"
     depends_on:
       rabbitmq:
@@ -463,7 +463,7 @@ services:
       CONTROL_KEY: q4_counter_1
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "1"
-      TOKENIZER_COUNT: "3"
+      TOKENIZER_COUNT: "4"
       NODE_ID: "1"
     depends_on:
       rabbitmq:
@@ -482,8 +482,27 @@ services:
       CONTROL_KEY: q4_counter_2
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "1"
-      TOKENIZER_COUNT: "3"
+      TOKENIZER_COUNT: "4"
       NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  
+  q4_counter_3:
+    build: .
+    container_name: q4_counter_3
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_3
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "3"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -501,7 +520,7 @@ services:
       CONTROL_KEY: q4_join
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "1"
-      PARTITIONS: "3"
+      PARTITIONS: "4"
       NODE_ID: "0"
       TOP_SIZE: "20"
     depends_on:
