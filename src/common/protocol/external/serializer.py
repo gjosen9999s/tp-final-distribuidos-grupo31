@@ -251,3 +251,20 @@ def serialize_q3_payload(words):
 
 def deserialize_q3_payload(payload):
     return Reader(payload).list(lambda reader: reader.string())
+
+
+def serialize_word_count(pair):
+    word, count = pair
+    return serialize_string(word) + serialize_uint32(count)
+
+
+def read_word_count(reader):
+    return reader.string(), reader.uint32()
+
+
+def serialize_q4_payload(pairs):
+    return serialize_list(pairs, serialize_word_count)
+
+
+def deserialize_q4_payload(payload):
+    return Reader(payload).list(read_word_count)

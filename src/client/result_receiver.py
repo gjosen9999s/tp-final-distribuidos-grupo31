@@ -106,6 +106,9 @@ class ResultReceiver:
         if result_type == ResultType.Q5:
             item = serializer.deserialize_q5_payload(payload)
             return f'"{item["url"]}",{item["wordCount"]}'
+        if result_type == ResultType.Q4:
+            pairs = serializer.deserialize_q4_payload(payload)
+            return "\n".join(f"{word},{count}" for word, count in pairs)
         if result_type == ResultType.Q3:
             words = serializer.deserialize_q3_payload(payload)
             return "\n".join(words)
