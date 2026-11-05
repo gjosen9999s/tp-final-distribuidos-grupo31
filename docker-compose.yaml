@@ -236,6 +236,83 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  q4_counter_0:
+    build: .
+    container_name: q4_counter_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_0
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_0
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "3"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_counter_1:
+    build: .
+    container_name: q4_counter_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_1
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_1
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "3"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_counter_2:
+    build: .
+    container_name: q4_counter_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_2
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_2
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "3"
+      NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_join:
+    build: .
+    container_name: q4_join
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_join
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Shared
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_join
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      PARTITIONS: "3"
+      NODE_ID: "0"
+      TOP_SIZE: "20"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   log_controller:
     build: .
     container_name: log_controller

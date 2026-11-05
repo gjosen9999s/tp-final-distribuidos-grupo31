@@ -12,6 +12,7 @@ from ..constants import (
     ART_URL,
     INT_ARTICLE,
     INT_Q3_PARTIAL,
+    INT_Q4_PARTIAL,
     INT_Q5_ACC_PARTIAL,
     INT_RESULT,
     INT_WORD_Q3,
@@ -22,9 +23,12 @@ from ..constants import (
 )
 from ..external.serializer import (
     Reader,
+    read_word_count,
     serialize_bytes,
     serialize_list,
+    serialize_q4_payload,
     serialize_uint8,
+    serialize_uint16,
     serialize_uint32,
     serialize_string,
 )
@@ -170,6 +174,13 @@ def deserialize(payload):
             "words": reader.list(lambda current: current.string()),
         }
     
+    # [1B tipo=8][4B clientId][2B nodeId][4B len pairs][ [4B len word][word][4B count] ... ]
+    if msg_type == InternalType.Q4_PARTIAL:
+        return InternalType.Q4_PARTIAL, client_id, {
+            "nodeId": reader.uint16(),
+            "pairs": reader.list(read_word_count),
+        }
+
     if msg_type == InternalType.WORDCOUNT_SUM:
         return InternalType.WORDCOUNT_SUM, client_id, {"wordCount": reader.uint32()}
 
@@ -218,4 +229,13 @@ def serialize_q3_partial_message(client_id, words):
         serialize_uint8(INT_Q3_PARTIAL)
         + serialize_uint32(client_id)
         + serialize_list(words, serialize_string)
+    )
+
+
+def serialize_q4_partial_message(client_id, node_id, pairs):
+    return (
+        serialize_uint8(INT_Q4_PARTIAL)
+        + serialize_uint32(client_id)
+        + serialize_uint16(node_id)
+        + serialize_q4_payload(pairs)
     )
