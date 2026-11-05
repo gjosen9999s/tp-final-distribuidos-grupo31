@@ -1,5 +1,6 @@
 """Q5 Counter: cuenta palabras de cada abstract y enruta según el año (<=2020 o >=2021)."""
 
+import logging
 import os
 import re
 from collections import Counter
@@ -10,6 +11,9 @@ from common.protocol.control import serializer as control
 from common.protocol.internal import serializer as internal
 from controllers.base.controller import Controller
 from common.middleware.middleware_rabbitmq import MessageMiddlewareQueueRabbitMQ
+
+logger = logging.getLogger("q5_counter")
+PROGRESS_EVERY = 5000
 
 # Tenemos un paquete de stopwords por defecto si falla NLTK
 try:
@@ -45,6 +49,7 @@ class Q5Counter(Controller):
 
         # Mensajes enviados para cada cliente por cada cola
         self._counts = Counter()
+        self._seen = Counter()
 
         self.group = GroupCoordinator(
             controller_type=CTRL_Q5_COUNTER,
@@ -55,12 +60,19 @@ class Q5Counter(Controller):
             done_sender=self._send_done,
         )
 
+        logger.info(
+            "START node=%s/%s",
+            self.node_id,
+            self.controller_count,
+        )
+
     def handle_article(self, client_id, article):
         # Estado protegido porque se lee desde un hilo y actualiza desde otro
         with self._lock:
             if self.group.is_closed(client_id):
                 return
 
+            self._seen[client_id] += 1
             word_count = self._count_words(article.abstract)
 
             if word_count > 0 and article.dateModified and article.dateModified > 0:
@@ -81,6 +93,16 @@ class Q5Counter(Controller):
             # Actualizar cuenta de los articulos procesados
             self.group.on_processed(client_id)
 
+            if self._seen[client_id] % PROGRESS_EVERY == 0:
+                logger.info(
+                    "PROGRESS client=%s node=%s seen=%s sum=%s cand=%s",
+                    client_id,
+                    self.node_id,
+                    self._seen[client_id],
+                    self._counts[(client_id, "sum")],
+                    self._counts[(client_id, "cand")],
+                )
+
     def handle_control(self, msg_type, client_id, message, from_control):
         with self._lock:
             self.group.on_control(msg_type, client_id, message, from_control)
@@ -88,6 +110,14 @@ class Q5Counter(Controller):
     def _send_done(self, client_id, _quantity):
         sum_qty = self._counts[(client_id, "sum")]
         cand_qty = self._counts[(client_id, "cand")]
+
+        logger.info(
+            "DONE client=%s node=%s sum=%s cand=%s",
+            client_id,
+            self.node_id,
+            sum_qty,
+            cand_qty,
+        )
 
         # Un DONE para Q5_Sum
         self.out_mw.send(control.serialize_done(client_id,CTRL_Q5_COUNTER, self.node_id,sum_qty,))

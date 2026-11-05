@@ -76,7 +76,20 @@ def main():
     logging.getLogger("pika").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    for name in ("q1", "tokenizer", "q3_reduce", "q3_join"):
+    for name in (
+        "q1",
+        "tokenizer",
+        "q3_reduce",
+        "q3_join",
+        "q4_counter",
+        "q4_join",
+        "q5_counter",
+        "q5_accumulator",
+        "q5_average_n_filter",
+        "Q2Filter",
+        "Q4Counter",
+        "Q4Join",
+    ):
         logging.getLogger(name).setLevel(log_level)
 
     controller_type = os.getenv("CONTROLLER_TYPE")

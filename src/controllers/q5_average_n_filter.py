@@ -1,5 +1,6 @@
 """Q5: calcula el promedio y filtra los candidatos >=2021."""
 
+import logging
 import os
 import threading
 from dataclasses import dataclass, field
@@ -19,6 +20,9 @@ from common.protocol.control import serializer as control
 from common.protocol.external import serializer as external
 from common.protocol.internal import serializer as internal
 from controllers.base.controller import Controller
+
+logger = logging.getLogger("q5_average_n_filter")
+PROGRESS_EVERY = 50000
 
 
 @dataclass
@@ -53,6 +57,13 @@ class Q5AverageNFilter(Controller):
 
         self._states = {}
         self._acc_thread = None
+
+        logger.info(
+            "START node=%s counters=%s accumulators=%s",
+            self.node_id,
+            self.q5_counters_qty,
+            self.q5_accumulators_qty,
+        )
 
     def run(self):
         # Hilo para consumir la segunda cola de Accumulators
@@ -116,6 +127,7 @@ class Q5AverageNFilter(Controller):
                     )
             ack()
         except Exception:
+            logger.exception("Error procesando mensaje en q5_average_n_filter (cola candidatos)")
             nack()
 
     def _on_acc_data(self, body, ack, nack):
@@ -139,6 +151,7 @@ class Q5AverageNFilter(Controller):
                     )
             ack()
         except Exception:
+            logger.exception("Error procesando mensaje en q5_average_n_filter (cola acumuladores)")
             nack()
 
     def _handle_candidate(self, client_id, url, word_count, doc_id):
@@ -148,6 +161,13 @@ class Q5AverageNFilter(Controller):
                 return
 
             state.candidates.append((url, word_count, doc_id))
+            if len(state.candidates) % PROGRESS_EVERY == 0:
+                logger.info(
+                    "PROGRESS client=%s node=%s candidates=%s",
+                    client_id,
+                    self.node_id,
+                    len(state.candidates),
+                )
             self._emit_if_ready(client_id, state)
 
     def _handle_acc_partial(self, client_id, total_sum, count):
@@ -158,6 +178,15 @@ class Q5AverageNFilter(Controller):
 
             state.total_words_sum += total_sum
             state.total_article_qty += count
+            logger.info(
+                "PARTIAL_ACC client=%s node=%s added_sum=%s added_count=%s total_sum=%s total_count=%s",
+                client_id,
+                self.node_id,
+                total_sum,
+                count,
+                state.total_words_sum,
+                state.total_article_qty,
+            )
             self._emit_if_ready(client_id, state)
 
     def _handle_counter_done(self, client_id, node_id):
@@ -167,6 +196,14 @@ class Q5AverageNFilter(Controller):
                 return
 
             state.received_counter_dones.add(node_id)
+            logger.info(
+                "DONE_COUNTER client=%s node=%s counter=%s (%s/%s)",
+                client_id,
+                self.node_id,
+                node_id,
+                len(state.received_counter_dones),
+                self.q5_counters_qty,
+            )
             self._emit_if_ready(client_id, state)
 
     def _handle_accumulator_done(self, client_id, node_id):
@@ -176,6 +213,14 @@ class Q5AverageNFilter(Controller):
                 return
 
             state.received_accumulator_dones.add(node_id)
+            logger.info(
+                "DONE_ACCUMULATOR client=%s node=%s accumulator=%s (%s/%s)",
+                client_id,
+                self.node_id,
+                node_id,
+                len(state.received_accumulator_dones),
+                self.q5_accumulators_qty,
+            )
             self._emit_if_ready(client_id, state)
 
     def _emit_if_ready(self, client_id, state):
@@ -202,6 +247,15 @@ class Q5AverageNFilter(Controller):
             if wc > average
         ]
 
+        logger.info(
+            "RESULT client=%s node=%s avg=%.2f candidates=%s matched=%s",
+            client_id,
+            self.node_id,
+            average,
+            len(state.candidates),
+            len(matching),
+        )
+
         for url, wc, doc_id in matching:
             payload = external.serialize_q5_payload(url, wc)
             self.out_mw.send(
@@ -222,6 +276,12 @@ class Q5AverageNFilter(Controller):
                 self.node_id,
                 len(matching),
             )
+        )
+        logger.info(
+            "DONE client=%s node=%s emitted=%s",
+            client_id,
+            self.node_id,
+            len(matching),
         )
 
     def handle_article(self, client_id, article):
