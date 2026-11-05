@@ -20,8 +20,8 @@ services:
       SERVER_PORT: "5678"
       MOM_HOST: rabbitmq
       RESULTS_QUEUE: QueryResults
-      DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract
-      CONTROLLERS_COUNT: "5"
+      DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract,Q5_Abstract
+      CONTROLLERS_COUNT: "6"
       LOGS_QUEUE: logs
     ports:
       - "5678:5678"
@@ -114,6 +114,7 @@ services:
       CONTROLLER_TYPE: tokenizer
       MOM_HOST: rabbitmq
       IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "0"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
@@ -132,6 +133,7 @@ services:
       CONTROLLER_TYPE: tokenizer
       MOM_HOST: rabbitmq
       IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "0"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
@@ -150,6 +152,7 @@ services:
       CONTROLLER_TYPE: tokenizer
       MOM_HOST: rabbitmq
       IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "0"
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q3
       PROGRESS_BATCH_SIZE: "100"
@@ -231,6 +234,65 @@ services:
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "1"
       PARTITIONS: "3"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_counter_0:
+    build: .
+    container_name: q5_counter_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q5_Abstract
+      OUT_QUEUE: Q5_Sum
+      OUT_CAND_QUEUE: Q5_Candidates
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_counter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_accumulator_0:
+    build: .
+    container_name: q5_accumulator_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_accumulator
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q5_Sum
+      OUT_QUEUE: Q5_Acc_Partial
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_accumulator
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      COUNTER_COUNT: "1"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_average_filter_0:
+    build: .
+    container_name: q5_average_filter_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_average_n_filter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q5_Candidates
+      IN_ACC_QUEUE: Q5_Acc_Partial
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_average_filter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      COUNTER_COUNT: "1"
+      ACCUMULATOR_COUNT: "1"
       NODE_ID: "0"
     depends_on:
       rabbitmq:

@@ -1,5 +1,6 @@
 """Extrae palabras no-stopword del abstract y las reparte por hash."""
 
+import logging
 import os
 import re
 import zlib
@@ -18,6 +19,8 @@ from controllers.base.controller import Controller
 STOP_WORDS = set(stopwords.words("english")) | set(stopwords.words("french"))
 WORD_REGEX = r"\b\w+\b"
 NUMBER_REGEX = r"[+-]?((\d+\.?\d*)|(\.\d+))"
+logger = logging.getLogger("tokenizer")
+PROGRESS_EVERY = 5000
 
 
 class Tokenizer(Controller):
@@ -25,6 +28,7 @@ class Tokenizer(Controller):
         super().__init__(*args, **kwargs)
 
         self.partitions = int(os.getenv("PARTITIONS", "1"))
+        self.q4_enabled = os.getenv("Q4_ENABLED", "1") != "0"
         mom_host = os.getenv("MOM_HOST", "localhost")
 
         # Una cola por particion para q3
@@ -33,14 +37,19 @@ class Tokenizer(Controller):
             for i in range(self.partitions)
         ]
 
-        # Una cola por particion para q4
-        self.q4_queues = [
-            MessageMiddlewareQueueRabbitMQ(mom_host, f"Q4_Words_{i}")
-            for i in range(self.partitions)
-        ]
+        # Una cola por particion para q4, solo si q4 esta habilitado.
+        self.q4_queues = (
+            [
+                MessageMiddlewareQueueRabbitMQ(mom_host, f"Q4_Words_{i}")
+                for i in range(self.partitions)
+            ]
+            if self.q4_enabled
+            else []
+        )
 
         # Palabras envidadas para cada cliente para cada cola
         self._counts = Counter()
+        self._articles = Counter()
 
         self.group = GroupCoordinator(
             controller_type=CTRL_TOKENIZER,
@@ -49,6 +58,14 @@ class Tokenizer(Controller):
             controller_count=self.controller_count,
             control_out=self.control_out,
             done_sender=self._send_done,
+        )
+
+        logger.info(
+            "START node=%s/%s partitions=%s q4=%s",
+            self.node_id,
+            self.controller_count,
+            self.partitions,
+            self.q4_enabled,
         )
 
     def handle_article(self, client_id, article):
@@ -70,23 +87,52 @@ class Tokenizer(Controller):
                     )
                 )
 
-                self.q4_queues[bucket].send(
-                    internal.serialize_word_q4_message(
-                        client_id, article.docId, word
+                if self.q4_enabled:
+                    self.q4_queues[bucket].send(
+                        internal.serialize_word_q4_message(
+                            client_id, article.docId, word
+                        )
                     )
-                )
+                    self._counts[(client_id, "q4", bucket)] += 1
 
                 self._counts[(client_id, "q3", bucket)] += 1
-                self._counts[(client_id, "q4", bucket)] += 1
 
             # El group cuenta los artículos procesados (EOF, PROGRESS, FLUSH).
             self.group.on_processed(client_id)
+
+            self._articles[client_id] += 1
+            if self._articles[client_id] % PROGRESS_EVERY == 0:
+                logger.info(
+                    "PROGRESS client=%s node=%s articles=%s q3=%s",
+                    client_id,
+                    self.node_id,
+                    self._articles[client_id],
+                    [
+                        self._counts[(client_id, "q3", index)]
+                        for index in range(self.partitions)
+                    ],
+                )
 
     def handle_control(self, msg_type, client_id, message, from_control):
         with self._lock:
             self.group.on_control(msg_type, client_id, message, from_control)
 
     def _send_done(self, client_id, _quantity):
+        logger.info(
+            "DONE client=%s node=%s q3=%s q4=%s",
+            client_id,
+            self.node_id,
+            [
+                self._counts[(client_id, "q3", index)]
+                for index in range(self.partitions)
+            ],
+            [
+                self._counts[(client_id, "q4", index)]
+                for index in range(self.partitions)
+            ]
+            if self.q4_enabled
+            else [],
+        )
 
         # Un DONE por cola de q3/particion con la cantidad enviada (msg) a esa cola.
         
