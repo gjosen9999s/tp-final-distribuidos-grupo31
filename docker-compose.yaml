@@ -22,7 +22,7 @@ services:
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       RESULTS_QUEUE: QueryResults
       DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract,Q5_Abstract
-      CONTROLLERS_COUNT: "8"
+      CONTROLLERS_COUNT: "9"
       LOGS_QUEUE: logs
     ports:
       - "5678:5678"
