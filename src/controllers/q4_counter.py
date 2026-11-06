@@ -20,6 +20,7 @@ from controllers.base.controller import Controller
 logger = logging.getLogger("Q4Counter")
 
 TOP_SIZE = int(os.getenv("TOP_SIZE", "20"))
+PROGRESS_EVERY = max(1, int(os.getenv("Q4_PROGRESS_EVERY", "100000")))
 
 def top_words(counts, size=TOP_SIZE):
     return heapq.nsmallest(size, counts.items(), key=lambda item: (-item[1], item[0]))
@@ -85,20 +86,36 @@ class Q4Counter(Controller):
                 msg_type, client_id, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q4:
                     raise ValueError(f"tipo inesperado para Q4 Counter: {msg_type}")
-                self._handle_word(client_id, message["word"])
+                self._handle_wordlist(client_id, message["wordlist"])
             ack()
         except Exception:
             logger.exception(f"[Q4Counter] Error procesando mensaje (nodo {self.node_id})")
             nack()
 
-    def _handle_word(self, client_id, word):
+    def _handle_wordlist(self, client_id, wordlist):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
                 return
 
-            state.counts[word] += 1
-            state.processed += 1
+            # Sumo todas las palabaras de la lista
+            for word in wordlist:
+                state.counts[word] += 1
+
+            state.processed += len(wordlist)
+            
+            if state.processed % PROGRESS_EVERY == 0:
+                logger.info(
+                    "[Q4Counter] PROGRESS client=%s node=%s processed=%s total=%s "
+                    "dones=%s/%s distintas=%s",
+                    client_id,
+                    self.node_id,
+                    state.processed,
+                    state.total,
+                    len(state.dones),
+                    self.tokenizers,
+                    len(state.counts),
+                )
             self._emit_if_ready(client_id, state)
 
     def _handle_done(self, msg_type, client_id, message):
@@ -119,9 +136,15 @@ class Q4Counter(Controller):
 
             state.dones.add(key)
             state.total += message["quantity"]
-            logger.debug(
-                f"[Q4Counter] Cliente ID={client_id}: DONE de tokenizer {message['nodeId']} "
-                f"({len(state.dones)}/{self.tokenizers}, esperadas {state.total} palabras)"
+            logger.info(
+                "[Q4Counter] DONE client=%s from_tokenizer=%s dones=%s/%s "
+                "total=%s processed=%s",
+                client_id,
+                message["nodeId"],
+                len(state.dones),
+                self.tokenizers,
+                state.total,
+                state.processed,
             )
             self._emit_if_ready(client_id, state)
 
