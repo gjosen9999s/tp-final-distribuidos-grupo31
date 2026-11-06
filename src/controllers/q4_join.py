@@ -77,9 +77,12 @@ class Q4Join(Controller):
                 return
 
             state.partials[node_id] = pairs
-            logger.debug(
-                f"[Q4Join] Cliente ID={client_id}: parcial del Counter {node_id} "
-                f"({len(state.partials)}/{self.partitions})"
+            logger.info(
+                "[Q4Join] PARTIAL client=%s from_counter=%s partials=%s/%s",
+                client_id,
+                node_id,
+                len(state.partials),
+                self.partitions,
             )
             self._emit_if_ready(client_id, state)
 
@@ -95,7 +98,18 @@ class Q4Join(Controller):
             if state.closed:
                 return
 
-            state.dones.add(message["nodeId"])
+            node_id = message["nodeId"]
+            if node_id in state.dones:
+                return
+
+            state.dones.add(node_id)
+            logger.info(
+                "[Q4Join] DONE client=%s from_counter=%s dones=%s/%s",
+                client_id,
+                node_id,
+                len(state.dones),
+                self.partitions,
+            )
             self._emit_if_ready(client_id, state)
 
     def _emit_if_ready(self, client_id, state):

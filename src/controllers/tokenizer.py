@@ -98,14 +98,14 @@ class Tokenizer(Controller):
                     )
                 )
 
-                #if self.q4_enabled:
-                #    self.q4_queues[i].send(
-                #        internal.serialize_word_q4_message(
-                #            client_id, article.docId, word
-                #        )
-                #    )
-                #    self._counts[(client_id, "q4", i)] += 1
-
+                if self.q4_enabled:
+                    self._counts[(client_id, "q4", i)] += len(wordlist[i])
+                    self.q4_queues[i].send(
+                        internal.serialize_wordlist_q4_message(
+                            client_id, article.docId, wordlist[i]
+                            )
+                        )
+                    
             # El group cuenta los artículos procesados (EOF, PROGRESS, FLUSH).
             self.group.on_processed(client_id)
 
