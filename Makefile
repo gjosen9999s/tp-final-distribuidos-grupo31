@@ -1,11 +1,14 @@
 SHELL := /bin/bash
-PWD := $(shell pwd)
 
 up:
-	mkdir -p output
 	COMPOSE_HTTP_TIMEOUT=300 docker compose -f docker-compose.yaml up --build --remove-orphans --detach
 	docker compose -f docker-compose.yaml logs --follow
 .PHONY: up
+
+debug:
+	LOG_LEVEL=DEBUG COMPOSE_HTTP_TIMEOUT=300 docker compose -f docker-compose.yaml up --build --remove-orphans --detach
+	docker compose -f docker-compose.yaml logs --follow
+.PHONY: debug
 
 down:
 	docker compose -f docker-compose.yaml stop -t 5
@@ -16,17 +19,16 @@ logs:
 	docker compose -f docker-compose.yaml logs
 .PHONY: logs
 
-q1-test:
-	docker compose -f tests/docker-compose.q1-test.yaml up --build --abort-on-container-exit --exit-code-from simulator; \
-	EXIT=$$?; docker compose -f tests/docker-compose.q1-test.yaml down -v; exit $$EXIT
-.PHONY: q1-test
+clean:
+	rm -rf data/client_1/output
+	rm -rf data/client_2/output
+	rm -rf data/client_3/output
+	rm -rf data/client_4/output
 
-e2e:
-	docker compose -f tests/docker-compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from client; \
-	EXIT=$$?; docker compose -f tests/docker-compose.e2e.yaml down -v; exit $$EXIT
-.PHONY: e2e
+	mkdir -p data/client_1/output/img
+	mkdir -p data/client_2/output/img
+	mkdir -p data/client_3/output/img
+	mkdir -p data/client_4/output/img
 
-e2e-3:
-	docker compose -f tests/docker-compose.e2e-3.yaml up --build --abort-on-container-exit --exit-code-from runner; \
-	EXIT=$$?; docker compose -f tests/docker-compose.e2e-3.yaml down -v; exit $$EXIT
-.PHONY: e2e-3
+	rm -rf output
+.PHONY: clean

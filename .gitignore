@@ -219,5 +219,19 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Tests locales
-tests/
+# Datos locales
+/output/
+data/client_*/input/*
+!data/client_*/input/.gitkeep
+data/client_*/control/*
+!data/client_*/control/.gitkeep
+data/*.parquet
+data/*.ctrl.*
+data/*.summ.txt
+
+# Salidas locales
+data/client_*/output/*
+!data/client_*/output/.gitkeep
+!data/client_*/output/img/
+data/client_*/output/img/*
+!data/client_*/output/img/.gitkeep

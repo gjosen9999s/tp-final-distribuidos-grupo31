@@ -8,9 +8,9 @@ import os
 import signal
 import socket
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 from types import FrameType
-from typing import Optional
+from typing import Dict, List, Optional
 
 from client.batch_sender import BatchSender
 from client.parquet_reader import ParquetReader
@@ -24,6 +24,18 @@ logging.basicConfig(
 logger = logging.getLogger("main")
 
 
+DEFAULT_PARQUET_COLUMNS = [
+    "identifier",
+    "name",
+    "url",
+    "date_modified",
+    "in_language",
+    "sections",
+    "abstract",
+    "image",
+]
+
+
 @dataclass
 class ClientConfig:
     """Validacion de configuracion"""
@@ -31,6 +43,10 @@ class ClientConfig:
     server_host: str
     server_port: int
     timeout: float
+    output_files: Dict [str,str]=field(default_factory=dict)
+    image_dir: str | None = None
+    columns: List[str]=field(default_factory=lambda: list(DEFAULT_PARQUET_COLUMNS))
+    batch_size: int = 1000
 
     @classmethod
     def from_env_and_args(cls) -> "ClientConfig":
@@ -39,7 +55,16 @@ class ClientConfig:
         parser.add_argument("--host", default=os.getenv("SERVER_HOST"))
         parser.add_argument("--port", type=int, default=os.getenv("SERVER_PORT"))
         parser.add_argument("--timeout", type=float, default=os.getenv("TIMEOUT", "60.0"))
-        
+        parser.add_argument("--summary", default=os.getenv("SUMMARY_FILE"))
+        parser.add_argument("--output1", default=os.getenv("OUTPUT_FILE_Q1"))
+        parser.add_argument("--output2", default=os.getenv("OUTPUT_FILE_Q2"))
+        parser.add_argument("--output3", default=os.getenv("OUTPUT_FILE_Q3"))
+        parser.add_argument("--output4", default=os.getenv("OUTPUT_FILE_Q4"))
+        parser.add_argument("--output5", default=os.getenv("OUTPUT_FILE_Q5"))
+        parser.add_argument("--img-dir", default=os.getenv("OUTPUT_IMG_DIR"))
+        parser.add_argument("--batch-size", type=int, default=int(os.getenv("BATCH_SIZE", "1000")))
+        parser.add_argument("--columns", default=os.getenv("PARQUET_COLUMNS"))
+
         args = parser.parse_args()
 
         if not args.input:
@@ -49,11 +74,29 @@ class ClientConfig:
         if not args.port:
             raise ValueError("Falta la configuracion critica: SERVER_PORT (o argumento --port)")
 
+        output_files = {
+            "summary": args.summary,
+            "q1": args.output1,
+            "q2": args.output2,
+            "q3": args.output3,
+            "q4": args.output4,
+            "q5": args.output5,
+            }
+
+        if args.columns:
+            columns = [c.strip() for c in args.columns.split(",") if c.strip()]
+        else:
+            columns = list(DEFAULT_PARQUET_COLUMNS)
+
         return cls(
             input_file=args.input,
             server_host=args.host,
             server_port=args.port,
-            timeout=args.timeout
+            timeout=args.timeout,
+            output_files=output_files,
+            image_dir=args.img_dir,
+            columns=columns,
+            batch_size=args.batch_size,
         )
 
 
@@ -99,6 +142,7 @@ def main() -> int:
         logger.critical(f"Error de configuracion en el arranque: {e}")
         return 1
 
+
     shutdown_handler = GracefulShutdown()
     shared_socket: Optional[socket.socket] = None
     reader: Optional[ParquetReader] = None
@@ -110,12 +154,15 @@ def main() -> int:
             config.server_port, 
             config.timeout
         )
-        
-        reader = ParquetReader(config.input_file)
+
+        reader = ParquetReader(config.input_file, batch_size=config.batch_size, columns=config.columns)
         
         # El mismo socket para envio y recepcion
         sender = BatchSender(shared_socket)
-        receiver = ResultReceiver(shared_socket)
+
+        receiver = ResultReceiver(
+            shared_socket, config.output_files, config.image_dir
+        )
 
         # Ingesta
         logger.info("Iniciando lectura y transmision de lotes Parquet...")
@@ -133,6 +180,13 @@ def main() -> int:
             logger.info("Transmision finalizada. Delegando control al ResultReceiver...")
             receiver.receive_until_last()
 
+        # Escritura de totales de control
+        with open(config.output_files["summary"], "a", encoding="utf-8") as file:
+            for query_id, count in sorted(receiver._results_by_query_type.items()):
+                file.write(f"Q{query_id}: {count}\n")
+
+        receiver.close_files()
+        
         logger.info("Ejecucion del cliente finalizada con exito.")
         return 0
 

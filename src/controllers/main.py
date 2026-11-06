@@ -1,5 +1,6 @@
 """Entry point genérico de controllers (CONTROLLER_TYPE)."""
 import importlib
+import logging
 import os
 import signal
 import sys
@@ -65,6 +66,32 @@ def build(controller_type):
 
 
 def main():
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+    logging.getLogger("pika").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    for name in (
+        "q1",
+        "tokenizer",
+        "q3_reduce",
+        "q3_join",
+        "q4_counter",
+        "q4_join",
+        "q5_counter",
+        "q5_accumulator",
+        "q5_average_n_filter",
+        "Q2Filter",
+        "Q4Counter",
+        "Q4Join",
+    ):
+        logging.getLogger(name).setLevel(log_level)
+
     controller_type = os.getenv("CONTROLLER_TYPE")
     if not controller_type:
         raise SystemExit("Falta CONTROLLER_TYPE")

@@ -11,13 +11,24 @@ from ..constants import (
     ART_SECTIONS_FLAGS,
     ART_URL,
     INT_ARTICLE,
+    INT_Q3_PARTIAL,
+    INT_Q4_PARTIAL,
+    INT_Q5_ACC_PARTIAL,
     INT_RESULT,
+    INT_WORD_Q3,
+    INT_WORD_Q4,
+    INT_WORDCOUNT_CAND,
+    INT_WORDCOUNT_SUM,
     InternalType,
 )
 from ..external.serializer import (
     Reader,
+    read_word_count,
     serialize_bytes,
+    serialize_list,
+    serialize_q4_payload,
     serialize_uint8,
+    serialize_uint16,
     serialize_uint32,
     serialize_string,
 )
@@ -86,12 +97,51 @@ def serialize_result_message(client_id, result_type, doc_id, part_id, flags, pay
     )
 
 
+def serialize_wordcount_sum(client_id: int, word_count: int) -> bytes:
+    """WORDCOUNT_SUM: conteo de palabras únicas de un artículo ≤2020."""
+    return (
+        serialize_uint8(INT_WORDCOUNT_SUM)
+        + serialize_uint32(client_id)
+        + serialize_uint32(word_count)
+    )
+
+
+def serialize_wordcount_cand(
+    client_id: int, word_count: int, doc_id: int, url: str
+) -> bytes:
+    """WORDCOUNT_CAND: conteo + identificador de un artículo candidato ≥2021."""
+    return (
+        serialize_uint8(INT_WORDCOUNT_CAND)
+        + serialize_uint32(client_id)
+        + serialize_uint32(word_count)
+        + serialize_uint32(doc_id)
+        + serialize_string(url)
+    )
+
+
+def serialize_q5_acc_partial(
+    client_id: int, total_sum: int, count: int
+) -> bytes:
+    """Q5_ACC_PARTIAL: (sum, count) de articulos de antes del 2020 para el Q5_AVG_Filter."""
+    return (
+        serialize_uint8(INT_Q5_ACC_PARTIAL)
+        + serialize_uint32(client_id)
+        + serialize_uint32(total_sum)
+        + serialize_uint32(count)
+    )
+
+
 def deserialize(payload):
+    # Todo mensaje interno arranca con [1B tipo][4B clientId].
     reader = Reader(payload)
     msg_type = reader.uint8()
     client_id = reader.uint32()
+
+    # [1B tipo=1][4B clientId][1B mask][campos según mask]
     if msg_type == InternalType.ARTICLE:
         return InternalType.ARTICLE, client_id, deserialize_article(reader)
+
+    # [1B tipo=10][4B clientId][1B resultType][4B docId][4B partId][1B flags][4B len payload][payload]
     if msg_type == InternalType.RESULT:
         return (
             InternalType.RESULT,
@@ -104,4 +154,88 @@ def deserialize(payload):
                 "payload": reader.bytes(),
             },
         )
+    # [1B tipo=2][4B clientId][4B len word][word][1B inLanguage]
+    if msg_type == InternalType.WORD_Q3:
+        return InternalType.WORD_Q3, client_id, {
+            "word": reader.string(),
+            "inLanguage": reader.uint8(),
+        }
+
+    # [1B type=3][4B clientId][4B docId][4B len word][word]
+    if msg_type == InternalType.WORD_Q4:
+        return InternalType.WORD_Q4, client_id, {
+            "docId": reader.uint32(),
+            "word": reader.string(),
+        }
+
+    # [1B tipo=7][4B clientId][4B len words][ [4B len word][word] ... ]
+    if msg_type == InternalType.Q3_PARTIAL:
+        return InternalType.Q3_PARTIAL, client_id, {
+            "words": reader.list(lambda current: current.string()),
+        }
+    
+    # [1B tipo=8][4B clientId][2B nodeId][4B len pairs][ [4B len word][word][4B count] ... ]
+    if msg_type == InternalType.Q4_PARTIAL:
+        return InternalType.Q4_PARTIAL, client_id, {
+            "nodeId": reader.uint16(),
+            "pairs": reader.list(read_word_count),
+        }
+
+    if msg_type == InternalType.WORDCOUNT_SUM:
+        return InternalType.WORDCOUNT_SUM, client_id, {"wordCount": reader.uint32()}
+
+    if msg_type == InternalType.WORDCOUNT_CAND:
+        return (
+            InternalType.WORDCOUNT_CAND,
+            client_id,
+            {
+                "wordCount": reader.uint32(),
+                "docId": reader.uint32(),
+                "url": reader.string(),
+            },
+        )
+
+    if msg_type == InternalType.Q5_ACC_PARTIAL:
+        return (
+            InternalType.Q5_ACC_PARTIAL,
+            client_id,
+            {
+                "totalSum": reader.uint32(),
+                "count": reader.uint32(),
+            },
+        )
     raise ValueError(f"tipo interno desconocido: {msg_type}")
+
+def serialize_word_q3_message(client_id, word, in_language):
+    return (
+        serialize_uint8(INT_WORD_Q3)
+        + serialize_uint32(client_id)
+        + serialize_string(word)
+        + serialize_uint8(in_language)
+    )
+
+
+def serialize_word_q4_message(client_id, doc_id, word):
+    return (
+        serialize_uint8(INT_WORD_Q4)
+        + serialize_uint32(client_id)
+        + serialize_uint32(doc_id)
+        + serialize_string(word)
+    )
+
+
+def serialize_q3_partial_message(client_id, words):
+    return (
+        serialize_uint8(INT_Q3_PARTIAL)
+        + serialize_uint32(client_id)
+        + serialize_list(words, serialize_string)
+    )
+
+
+def serialize_q4_partial_message(client_id, node_id, pairs):
+    return (
+        serialize_uint8(INT_Q4_PARTIAL)
+        + serialize_uint32(client_id)
+        + serialize_uint16(node_id)
+        + serialize_q4_payload(pairs)
+    )

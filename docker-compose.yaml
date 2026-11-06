@@ -19,7 +19,10 @@ services:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: "5678"
       MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       RESULTS_QUEUE: QueryResults
+      DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract,Q5_Abstract
+      CONTROLLERS_COUNT: "9"
       LOGS_QUEUE: logs
     ports:
       - "5678:5678"
@@ -27,7 +30,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',5678),2); s.close()"]
+      test: ["CMD-SHELL", "test -f /tmp/article_handler_ready"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -39,11 +42,13 @@ services:
     environment:
       CONTROLLER_TYPE: q1_controller
       MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q1_Metadata
       OUT_QUEUE: QueryResults
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q1
       PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "0"
     depends_on:
       rabbitmq:
@@ -56,11 +61,13 @@ services:
     environment:
       CONTROLLER_TYPE: q1_controller
       MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q1_Metadata
       OUT_QUEUE: QueryResults
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q1
       PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "1"
     depends_on:
       rabbitmq:
@@ -73,12 +80,449 @@ services:
     environment:
       CONTROLLER_TYPE: q1_controller
       MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       IN_QUEUE: Q1_Metadata
       OUT_QUEUE: QueryResults
       CONTROL_EXCHANGE: control
       CONTROL_KEY: q1
       PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
       NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q2_0:
+    build: .
+    container_name: q2_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q2_filter
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q2_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q2_filter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q2_1:
+    build: .
+    container_name: q2_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q2_filter
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q2_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q2_filter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q2_2:
+    build: .
+    container_name: q2_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q2_filter
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q2_Metadata
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q2_filter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "3"
+      NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer:
+    build: .
+    container_name: tokenizer
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "1"
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "4"
+      NODE_ID: "0"
+      PARTITIONS: "4"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer_1:
+    build: .
+    container_name: tokenizer_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "1"
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "4"
+      NODE_ID: "1"
+      PARTITIONS: "4"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer_2:
+    build: .
+    container_name: tokenizer_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "1"
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "4"
+      NODE_ID: "2"
+      PARTITIONS: "4"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  tokenizer_3:
+    build: .
+    container_name: tokenizer_3
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: tokenizer
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q34_Abstract
+      Q4_ENABLED: "1"
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "4"
+      NODE_ID: "3"
+      PARTITIONS: "4"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_0:
+    build: .
+    container_name: q3_reduce_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q3_Words_0
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_0
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_1:
+    build: .
+    container_name: q3_reduce_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q3_Words_1
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_1
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_2:
+    build: .
+    container_name: q3_reduce_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q3_Words_2
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_2
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_reduce_3:
+    build: .
+    container_name: q3_reduce_3
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_reduce
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q3_Words_3
+      OUT_QUEUE: Q3_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_reduce_3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "3"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q3_join:
+    build: .
+    container_name: q3_join
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q3_join
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q3_Shared
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q3_join
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      PARTITIONS: "4"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_counter_0:
+    build: .
+    container_name: q5_counter_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_counter
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q5_Abstract
+      OUT_QUEUE: Q5_Sum
+      OUT_CAND_QUEUE: Q5_Candidates
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_counter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "2"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_counter_1:
+    build: .
+    container_name: q5_counter_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_counter
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q5_Abstract
+      OUT_QUEUE: Q5_Sum
+      OUT_CAND_QUEUE: Q5_Candidates
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_counter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "2"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_accumulator_0:
+    build: .
+    container_name: q5_accumulator_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_accumulator
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q5_Sum
+      OUT_QUEUE: Q5_Acc_Partial
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_accumulator
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "2"
+      COUNTER_COUNT: "2"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_accumulator_1:
+    build: .
+    container_name: q5_accumulator_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_accumulator
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q5_Sum
+      OUT_QUEUE: Q5_Acc_Partial
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_accumulator
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "2"
+      COUNTER_COUNT: "2"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q5_average_filter_0:
+    build: .
+    container_name: q5_average_filter_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q5_average_n_filter
+      MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      IN_QUEUE: Q5_Candidates
+      IN_ACC_QUEUE: Q5_Acc_Partial
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q5_average_filter
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      COUNTER_COUNT: "2"
+      ACCUMULATOR_COUNT: "2"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_counter_0:
+    build: .
+    container_name: q4_counter_0
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_0
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_0
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "0"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_counter_1:
+    build: .
+    container_name: q4_counter_1
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_1
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_1
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "1"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_counter_2:
+    build: .
+    container_name: q4_counter_2
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_2
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_2
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "2"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  
+  q4_counter_3:
+    build: .
+    container_name: q4_counter_3
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_counter
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Words_3
+      OUT_QUEUE: Q4_Shared
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_counter_3
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      TOKENIZER_COUNT: "4"
+      NODE_ID: "3"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  q4_join:
+    build: .
+    container_name: q4_join
+    command: ["python", "-m", "controllers.main"]
+    environment:
+      CONTROLLER_TYPE: q4_join
+      MOM_HOST: rabbitmq
+      IN_QUEUE: Q4_Shared
+      OUT_QUEUE: QueryResults
+      CONTROL_EXCHANGE: control
+      CONTROL_KEY: q4_join
+      PROGRESS_BATCH_SIZE: "100"
+      CONTROLLER_COUNT: "1"
+      PARTITIONS: "4"
+      NODE_ID: "0"
+      TOP_SIZE: "20"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -86,9 +530,11 @@ services:
   log_controller:
     build: .
     container_name: log_controller
+    profiles: ["logs"]
     command: ["python", "-m", "log_controller.main"]
     environment:
       MOM_HOST: rabbitmq
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       LOGS_QUEUE: logs
       LOG_DIR: /logs
     volumes:
@@ -100,10 +546,95 @@ services:
   client_1:
     build: .
     container_name: client_1
-    command: ["python", "-m", "client.main", "--input", "/data/input_1.parquet", "--host", "article_handler", "--port", "5678"]
+    command: ["python", "-m", "client.main"]
+    environment:
+      INPUT_FILE:       /data/client_1/input/wiki_sample_1.parquet
+      SUMMARY_FILE:     /data/client_1/output/summary.txt
+      OUTPUT_FILE_Q1:   /data/client_1/output/q1.txt
+      OUTPUT_FILE_Q2:   /data/client_1/output/q2.txt
+      OUTPUT_FILE_Q3:   /data/client_1/output/q3.txt
+      OUTPUT_FILE_Q4:   /data/client_1/output/q4.txt
+      OUTPUT_FILE_Q5:   /data/client_1/output/q5.txt
+      OUTPUT_IMG_DIR:   /data/client_1/output/img
+      BATCH_SIZE: "1000"
+      PARQUET_COLUMNS: "identifier,name,url,date_modified,in_language,sections,abstract,image"
+      SERVER_HOST: article_handler
+      SERVER_PORT: "5678"
+      TIMEOUT: "1800"
     volumes:
       - ./data:/data
-      - ./output:/output
     depends_on:
       article_handler:
         condition: service_healthy
+
+#   client_2:
+#     build: .
+#     container_name: client_2
+#     command: ["python", "-m", "client.main"]
+#     environment:
+#       INPUT_FILE: /data/client_2/input/wiki_sample_2.parquet
+#       SUMMARY_FILE:     /data/client_2/output/summary.txt
+#       OUTPUT_FILE_Q1:   /data/client_2/output/q1.txt
+#       OUTPUT_FILE_Q2:   /data/client_2/output/q2.txt
+#       OUTPUT_FILE_Q3:   /data/client_2/output/q3.txt
+#       OUTPUT_FILE_Q4:   /data/client_2/output/q4.txt
+#       OUTPUT_FILE_Q5:   /data/client_2/output/q5.txt
+#       OUTPUT_IMG_DIR:   /data/client_2/output/img
+#       BATCH_SIZE: "1000"
+#       PARQUET_COLUMNS: "identifier,name,url,date_modified,in_language,sections,abstract,image"
+#       SERVER_HOST: article_handler
+#       SERVER_PORT: "5678"
+#       TIMEOUT: "1800"
+#     volumes:
+#       - ./data:/data
+#     depends_on:
+#       article_handler:
+#         condition: service_healthy
+# 
+#   client_3:
+#     build: .
+#     container_name: client_3
+#     command: ["python", "-m", "client.main"]
+#     environment:
+#       INPUT_FILE: /data/client_3/input/wiki_sample_3.parquet
+#       SUMMARY_FILE:     /data/client_3/output/summary.txt
+#       OUTPUT_FILE_Q1:   /data/client_3/output/q1.txt
+#       OUTPUT_FILE_Q2:   /data/client_3/output/q2.txt
+#       OUTPUT_FILE_Q3:   /data/client_3/output/q3.txt
+#       OUTPUT_FILE_Q4:   /data/client_3/output/q4.txt
+#       OUTPUT_FILE_Q5:   /data/client_3/output/q5.txt
+#       OUTPUT_IMG_DIR:   /data/client_3/output/img
+#       BATCH_SIZE: "1000"
+#       PARQUET_COLUMNS: "identifier,name,url,date_modified,in_language,sections,abstract,image"
+#       SERVER_HOST: article_handler
+#       SERVER_PORT: "5678"
+#       TIMEOUT: "1800"
+#     volumes:
+#       - ./data:/data
+#     depends_on:
+#       article_handler:
+#         condition: service_healthy
+# 
+#   client_4:
+#     build: .
+#     container_name: client_4
+#     command: ["python", "-m", "client.main"]
+#     environment:
+#       INPUT_FILE: /data/client_4/input/wiki_sample_4.parquet
+#       SUMMARY_FILE:     /data/client_4/output/summary.txt
+#       OUTPUT_FILE_Q1:   /data/client_4/output/q1.txt
+#       OUTPUT_FILE_Q2:   /data/client_4/output/q2.txt
+#       OUTPUT_FILE_Q3:   /data/client_4/output/q3.txt
+#       OUTPUT_FILE_Q4:   /data/client_4/output/q4.txt
+#       OUTPUT_FILE_Q5:   /data/client_4/output/q5.txt
+#       OUTPUT_IMG_DIR:   /data/client_4/output/img
+#       BATCH_SIZE: "1000"
+#       PARQUET_COLUMNS: "identifier,name,url,date_modified,in_language,sections,abstract,image"
+#       SERVER_HOST: article_handler
+#       SERVER_PORT: "5678"
+#       TIMEOUT: "1800"
+#     volumes:
+#       - ./data:/data
+#     depends_on:
+#       article_handler:
+#         condition: service_healthy
