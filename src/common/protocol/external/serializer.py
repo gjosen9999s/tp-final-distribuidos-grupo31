@@ -58,6 +58,22 @@ def serialize_string(value):
     data = value.encode("utf-8")
     return serialize_uint32(len(data)) + data
 
+def serialize_stringlist(value):
+
+    data = b""
+
+    for i in range(len(value)):
+        data += value[i].encode("utf-8")
+        data += b"|" if i < len(value) - 1 else b""
+
+    return serialize_uint32(len(data)) + data
+
+def deserialize_stringlist(data):
+    
+    if not data:
+        return []
+    
+    return data.decode("utf-8").split("|")
 
 def deserialize_string(data):
     return data.decode("utf-8")

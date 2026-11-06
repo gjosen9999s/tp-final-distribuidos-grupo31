@@ -74,28 +74,37 @@ class Tokenizer(Controller):
             if self.group.is_closed(client_id):
                 return
 
+            wordlist=[[] for _ in range(self.partitions)]
+
             # Dentro de un mismo abstract, cada palabra cuenta una sola vez (set)
             words = self._tokenize(article.abstract)
-
+    
             for word in words:
                 # La misma palabra tiene que ir siempre a la misma particion de salida
-                bucket = zlib.crc32(word.encode("utf-8")) % self.partitions
+                index = zlib.crc32(word.encode("utf-8")) % self.partitions
+                wordlist[index].append(word)
 
-                self.q3_queues[bucket].send(
-                    internal.serialize_word_q3_message(
-                        client_id, word, article.inLanguage
+            # Un msj emitido a cada cola de salida de Q3 (envio una lista de palabras x c/u)
+            for i in range(self.partitions):
+
+                # Si la lista esta vacia, no mandamos nada
+                if len(wordlist[i])==0:
+                    continue 
+                    
+                self._counts[(client_id, "q3", i)] += len(wordlist[i])
+                self.q3_queues[i].send(
+                    internal.serialize_wordlist_q3_message(
+                        client_id, wordlist[i], article.inLanguage
                     )
                 )
 
-                if self.q4_enabled:
-                    self.q4_queues[bucket].send(
-                        internal.serialize_word_q4_message(
-                            client_id, article.docId, word
-                        )
-                    )
-                    self._counts[(client_id, "q4", bucket)] += 1
-
-                self._counts[(client_id, "q3", bucket)] += 1
+                #if self.q4_enabled:
+                #    self.q4_queues[i].send(
+                #        internal.serialize_word_q4_message(
+                #            client_id, article.docId, word
+                #        )
+                #    )
+                #    self._counts[(client_id, "q4", i)] += 1
 
             # El group cuenta los artículos procesados (EOF, PROGRESS, FLUSH).
             self.group.on_processed(client_id)
