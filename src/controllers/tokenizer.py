@@ -112,7 +112,7 @@ class Tokenizer(Controller):
             self._articles[client_id] += 1
             if self._articles[client_id] % PROGRESS_EVERY == 0:
                 logger.info(
-                    "PROGRESS client=%s node=%s articles=%s q3=%s",
+                    "PROGRESS client=%s node=%s articles=%s q3/q4=%s",
                     client_id,
                     self.node_id,
                     self._articles[client_id],
