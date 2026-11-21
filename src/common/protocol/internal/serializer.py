@@ -163,12 +163,12 @@ def deserialize(payload):
             "inLanguage": reader.uint8(),
         }
 
-    # [1B type=3][4B clientId][4B docId][4B len word][word]
+    # [1B type=3][4B clientId][4B docId][4B len wordlist][word|word|...|word]
     if msg_type == InternalType.WORD_Q4:
         return InternalType.WORD_Q4, client_id, {
-            "docId": reader.uint32(),
-            "word": reader.string(),
-        }
+        "docId": reader.uint32(),
+        "wordlist": deserialize_stringlist(reader.bytes()),
+    }
 
     # [1B tipo=7][4B clientId][4B len words][ [4B len word][word] ... ]
     if msg_type == InternalType.Q3_PARTIAL:
@@ -230,6 +230,14 @@ def serialize_word_q4_message(client_id, doc_id, word):
         + serialize_uint32(client_id)
         + serialize_uint32(doc_id)
         + serialize_string(word)
+    )
+
+def serialize_wordlist_q4_message(client_id, doc_id, wordlist):
+    return (
+        serialize_uint8(INT_WORD_Q4)
+        + serialize_uint32(client_id)
+        + serialize_uint32(doc_id)
+        + serialize_stringlist(wordlist)
     )
 
 
