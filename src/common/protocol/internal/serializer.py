@@ -31,6 +31,8 @@ from ..external.serializer import (
     serialize_uint16,
     serialize_uint32,
     serialize_string,
+    serialize_stringlist,
+    deserialize_stringlist
 )
 
 
@@ -154,10 +156,10 @@ def deserialize(payload):
                 "payload": reader.bytes(),
             },
         )
-    # [1B tipo=2][4B clientId][4B len word][word][1B inLanguage]
+    # [1B tipo=2][4B clientId][4B len wordlist][word|word|...|word][1B inLanguage]
     if msg_type == InternalType.WORD_Q3:
         return InternalType.WORD_Q3, client_id, {
-            "word": reader.string(),
+            "wordlist": deserialize_stringlist(reader.bytes()),
             "inLanguage": reader.uint8(),
         }
 
@@ -214,6 +216,13 @@ def serialize_word_q3_message(client_id, word, in_language):
         + serialize_uint8(in_language)
     )
 
+def serialize_wordlist_q3_message(client_id, wordlist, in_language):
+    return (
+        serialize_uint8(INT_WORD_Q3)
+        + serialize_uint32(client_id)
+        + serialize_stringlist(wordlist)
+        + serialize_uint8(in_language)
+    )
 
 def serialize_word_q4_message(client_id, doc_id, word):
     return (

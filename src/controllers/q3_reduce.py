@@ -68,26 +68,26 @@ class Q3Reduce(Controller):
                 msg_type, client_id, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q3:
                     raise ValueError(f"tipo inesperado para Q3 Reduce: {msg_type}")
-                self._handle_word(
-                    client_id, message["word"], message["inLanguage"]
+                self._handle_wordlist(
+                    client_id, message["wordlist"], message["inLanguage"]
                 )
             ack()
         except Exception:
             nack()
 
-    def _handle_word(self, client_id, word, in_language):
+    def _handle_wordlist(self, client_id, wordlist, in_language):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
                 return
 
             # Se cuentan todas las palabras recibidas indpte del idioma porque se reciben sin filtrar
-            state.processed += 1
+            state.processed += len(wordlist)
 
             if in_language == LANG_EN:
-                state.en_words.add(word)
+                state.en_words.update(wordlist)
             elif in_language == LANG_FR:
-                state.fr_words.add(word)
+                state.fr_words.update(wordlist)
 
             if state.processed % PROGRESS_EVERY == 0:
                 logger.info(
