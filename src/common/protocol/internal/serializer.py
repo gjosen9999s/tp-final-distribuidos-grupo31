@@ -99,11 +99,12 @@ def serialize_result_message(client_id, result_type, doc_id, part_id, flags, pay
     )
 
 
-def serialize_wordcount_sum(client_id: int, word_count: int) -> bytes:
+def serialize_wordcount_sum(client_id: int, doc_id: int, word_count: int) -> bytes:
     """WORDCOUNT_SUM: conteo de palabras únicas de un artículo ≤2020."""
     return (
         serialize_uint8(INT_WORDCOUNT_SUM)
         + serialize_uint32(client_id)
+        + serialize_uint32(doc_id)
         + serialize_uint32(word_count)
     )
 
@@ -184,7 +185,14 @@ def deserialize(payload):
         }
 
     if msg_type == InternalType.WORDCOUNT_SUM:
-        return InternalType.WORDCOUNT_SUM, client_id, {"wordCount": reader.uint32()}
+        return (
+            InternalType.WORDCOUNT_SUM,
+            client_id,
+            {
+                "docId": reader.uint32(),
+                "wordCount": reader.uint32(),
+            },
+        )
 
     if msg_type == InternalType.WORDCOUNT_CAND:
         return (
