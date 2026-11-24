@@ -2,6 +2,7 @@
 import socket
 import threading
 import logging
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from common.protocol.constants import (
     ART_DOCID, ART_NAME, ART_URL, ART_DATE_MODIFIED,
@@ -13,6 +14,11 @@ from common.protocol.control import serializer as control
 
 logger = logging.getLogger("IngestThread")
 READY_FILE = "/tmp/article_handler_ready"
+DEFAULT_MAX_WORKERS = 8
+
+KEEPALIVE_IDLE_S = 30
+KEEPALIVE_INTERVAL_S = 10
+KEEPALIVE_PROBES = 3
 
 FULL_ARTICLE_MASK = (
     ART_DOCID | ART_NAME | ART_URL | ART_DATE_MODIFIED |
@@ -21,7 +27,8 @@ FULL_ARTICLE_MASK = (
 
 
 class IngestThread(threading.Thread):
-    def __init__(self, host: str, port: int, sessions, data_queues, logger_client=None, stop_event=None):
+    def __init__(self, host: str, port: int, sessions, data_queues, logger_client=None, stop_event=None,
+                 max_workers: int = DEFAULT_MAX_WORKERS):
         super().__init__(daemon=True)
         self.host = host
         self.port = port
@@ -34,6 +41,10 @@ class IngestThread(threading.Thread):
         self.stop_event = stop_event or threading.Event()
         self.server_socket = None
         self.send_lock = threading.Lock()
+        self.max_workers = max_workers
+        self._executor = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="ingest-client"
+        )
 
     def run(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,23 +66,48 @@ class IngestThread(threading.Thread):
                     logger.error(f"[IngestThread] Error al aceptar conexión: {e}")
                 break
 
+            self._enable_keepalive(client_sock)
             session = self.sessions.register_session(client_sock, addr)
             logger.info(f"[IngestThread] Cliente conectado: ID={session.client_id} ({addr})")
 
-            client_thread = threading.Thread(
-                target=self._handle_client,
-                args=(session,),
-                daemon=True
+            try:
+                future = self._executor.submit(self._handle_client, session)
+            except RuntimeError:
+                # El pool ya fue cerrado (shutdown en curso): no se puede atender más clientes.
+                self.sessions.unregister_session(session.client_id)
+                break
+            future.add_done_callback(
+                lambda f, s=session: self._on_client_done(f, s)
             )
-            client_thread.start()
 
         self._close_server_socket()
         self._remove_ready_file()
+        self._executor.shutdown(wait=False, cancel_futures=True)
 
     def stop(self):
         self.stop_event.set()
         self._close_server_socket()
         self._remove_ready_file()
+        self._executor.shutdown(wait=False, cancel_futures=True)
+
+    def join_workers(self):
+        self._executor.shutdown(wait=True)
+
+    def _on_client_done(self, future: Future, session):
+        if future.cancelled():
+            logger.info(f"[IngestThread] Cliente ID={session.client_id} descartado: shutdown antes de ser atendido.")
+            self.sessions.unregister_session(session.client_id)
+
+    @staticmethod
+    def _enable_keepalive(sock: socket.socket) -> None:
+        # Activa TCP keepalive en el socket del cliente
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, KEEPALIVE_IDLE_S)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, KEEPALIVE_INTERVAL_S)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, KEEPALIVE_PROBES)
+        except (OSError, AttributeError) as e:
+            logger.warning(f"[IngestThread] No se pudo configurar keepalive: {e}")
 
     def _remove_ready_file(self):
         try:

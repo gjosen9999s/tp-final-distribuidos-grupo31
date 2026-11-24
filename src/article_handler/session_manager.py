@@ -96,6 +96,10 @@ class SessionManager:
         with self._lock:
             for session in self._sessions.values():
                 try:
+                    session.sock.shutdown(socket.SHUT_RDWR)
+                except Exception:
+                    pass
+                try:
                     session.sock.close()
                 except Exception:
                     pass
