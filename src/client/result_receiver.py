@@ -133,6 +133,37 @@ class ResultReceiver:
         path.write_bytes(image)
         return str(path)
 
+    def handle_payload(self, payload: bytes) -> bool:
+        """
+        Procesa un frame que no es ACK. Se usa tanto durante la ingesta (resultados Q1/Q2 en
+        streaming) como en receive_until_last
+        Devuelve True si el frame cierra la sesión
+        """
+        try:
+            msg_type, data = serializer.deserialize_message(payload)
+        except ValueError as e:
+            logger.error(f"Fallo al decodificar el mensaje del Gateway: {e}")
+            raise RuntimeError("Corrupción en el protocolo binario de recepción.") from e
+
+        if msg_type == ExternalType.RESULT:
+            self._process_result(data)
+            if data["flags"] & FLAG_IS_SESSION_END:
+                logger.info(
+                    f"Señal de fin de sesión recibida del clúster. "
+                    f"Total de resultados recolectados con éxito: {self._results_received}."
+                )
+                return True
+            return False
+
+        if msg_type == ExternalType.ERROR:
+            error_code = data.get("code", "UNKNOWN")
+            error_msg = data.get("message", "Sin descripción")
+            logger.error(f"El clúster abortó el procesamiento con un ERROR [{error_code}]: {error_msg}")
+            return True
+
+        logger.warning(f"Tipo de mensaje externo ignorado o desconocido: {msg_type}")
+        return False
+
     def receive_until_last(self) -> None:
         """
         Bucle de red bloqueante.
@@ -151,31 +182,8 @@ class ResultReceiver:
                     logger.debug("Latido (ACK) recibido del Gateway. El clúster sigue procesando.")
                     continue
 
-                # Deserialización del mensaje
-                try:
-                    msg_type, data = serializer.deserialize_message(payload)
-                except ValueError as e:
-                    logger.error(f"Fallo al decodificar el mensaje del Gateway: {e}")
-                    raise RuntimeError("Corrupción en el protocolo binario de recepción.") from e
-
-                # Enrutamiento de la respuesta
-                if msg_type == ExternalType.RESULT:
-                    self._process_result(data)
-                    if data["flags"] & FLAG_IS_SESSION_END:
-                        logger.info(
-                            f"Señal de fin de sesión recibida del clúster. "
-                            f"Total de resultados recolectados con éxito: {self._results_received}."
-                        )
-                        break
-
-                elif msg_type == ExternalType.ERROR:
-                    error_code = data.get("code", "UNKNOWN")
-                    error_msg = data.get("message", "Sin descripción")
-                    logger.error(f"El clúster abortó el procesamiento con un ERROR [{error_code}]: {error_msg}")
+                if self.handle_payload(payload):
                     break
-                
-                else:
-                    logger.warning(f"Tipo de mensaje externo ignorado o desconocido: {msg_type}")
 
         except TimeoutError as e:
             logger.critical(

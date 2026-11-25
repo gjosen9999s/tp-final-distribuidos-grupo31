@@ -5,7 +5,7 @@ import signal
 import sys
 import threading
 from article_handler.egress_thread import EgressThread
-from article_handler.ingest_thread import IngestThread
+from article_handler.ingest_thread import DEFAULT_MAX_WORKERS, IngestThread
 from article_handler.session_manager import SessionManager
 from common.middleware.middleware_rabbitmq import MessageMiddlewareQueueRabbitMQ
 
@@ -25,6 +25,7 @@ def main():
     port = int(os.getenv("SERVER_PORT", "5678"))
     mom_host = os.getenv("MOM_HOST", "localhost")
     expected_dones = int(os.getenv("CONTROLLERS_COUNT", "3"))
+    max_workers = int(os.getenv("INGEST_MAX_WORKERS", str(DEFAULT_MAX_WORKERS)))
     stop = threading.Event()
 
     queues_env = os.getenv("DATA_QUEUES")
@@ -44,7 +45,8 @@ def main():
 
     sessions = SessionManager(expected_dones=expected_dones)
 
-    ingest = IngestThread(host, port, sessions, data_queues, stop_event=stop)
+    ingest = IngestThread(host, port, sessions, data_queues, stop_event=stop, max_workers=max_workers)
+    logger.info(f"Pool de threads con {max_workers} max workers")
     egress = EgressThread(results, sessions, stop_event=stop)
 
     def on_signal(signum, frame):
@@ -64,9 +66,13 @@ def main():
     finally:
         logger.info("Cerrando recursos y conexiones TCP/MOM...")
         stop.set()
-        sessions.close_all()
+        # dejar de aceptar clientes nuevos y cancelar los que esperan en la cola del pool
         ingest.stop()
         ingest.join()
+        # cerrar sockets para desbloquear a los workers que están en recv()
+        sessions.close_all()
+        # esperar que los workers del pool terminen
+        ingest.join_workers()
         egress.stop()
         egress.join()
         for queue in data_queues.values():

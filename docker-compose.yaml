@@ -25,6 +25,7 @@ services:
       DATA_QUEUES: Q1_Metadata,Q2_Metadata, Q34_Abstract,Q5_Abstract
       CONTROLLERS_COUNT: "7"
       LOGS_QUEUE: logs
+      INGEST_MAX_WORKERS: "8"
     ports:
       - "5678:5678"
     depends_on:
