@@ -158,11 +158,13 @@ def main() -> int:
         reader = ParquetReader(config.input_file, batch_size=config.batch_size, columns=config.columns)
         
         # El mismo socket para envio y recepcion
-        sender = BatchSender(shared_socket)
-
         receiver = ResultReceiver(
             shared_socket, config.output_files, config.image_dir
         )
+
+        # Q1/Q2 llegan en streaming mientras se envian los lotes: el sender se las
+        # delega al receiver cuando las encuentra antes de un ACK.
+        sender = BatchSender(shared_socket, on_frame=receiver.handle_payload)
 
         # Ingesta
         logger.info("Iniciando lectura y transmision de lotes Parquet...")

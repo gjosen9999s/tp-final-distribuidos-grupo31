@@ -8,6 +8,17 @@ from common.protocol.external import framing
 logger = logging.getLogger("SessionManager")
 
 
+def _close_socket(sock: socket.socket) -> None:
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except Exception:
+        pass
+    try:
+        sock.close()
+    except Exception:
+        pass
+
+
 class ClientSession:
     """Representa la sesión activa de un cliente conectado vía TCP."""
 
@@ -37,13 +48,17 @@ class ClientSession:
                 framing.send_message(self.sock, payload)
             self._buffer.clear()
 
-    def send_result_or_buffer(self, payload: bytes) -> None:
+    def send_result_or_buffer(self, payload: bytes, immediate: bool = False) -> None:
         """
         Si el cliente ya envió EOF, transmite el resultado por el socket.
-        Si el cliente aún envía batches, lo encola para evitar colisionar con los ACKs.
+        Si el cliente aún envía batches, lo encola, salvo que `immediate` sea True
+        (resultados en streaming, p. ej. Q1/Q2): en ese caso se envía ya mismo.
+
+        Es seguro intercalar resultados con los ACKs porque cada frame se escribe completo
+        bajo `_lock` y el cliente consume frames hasta ver el ACK que espera.
         """
         with self._lock:
-            if self._eof_reached:
+            if self._eof_reached or immediate:
                 framing.send_message(self.sock, payload)
             else:
                 self._buffer.append(payload)
@@ -83,10 +98,7 @@ class SessionManager:
         with self._lock:
             session = self._sessions.pop(client_id, None)
             if session:
-                try:
-                    session.sock.close()
-                except Exception:
-                    pass
+                _close_socket(session.sock)
 
     def get_session(self, client_id: int) -> Optional[ClientSession]:
         with self._lock:
@@ -95,12 +107,5 @@ class SessionManager:
     def close_all(self) -> None:
         with self._lock:
             for session in self._sessions.values():
-                try:
-                    session.sock.shutdown(socket.SHUT_RDWR)
-                except Exception:
-                    pass
-                try:
-                    session.sock.close()
-                except Exception:
-                    pass
+                _close_socket(session.sock)
             self._sessions.clear()

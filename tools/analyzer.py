@@ -114,15 +114,26 @@ def image_sha256(url):
 
 
 # Helper para marcar los que tienen biografia / biographie
-BIOGRAPHY_SECTION_NAMES = ['biographie', 'biography']
+BIOGRAPHY_SECTION_NAMES = {'biographie', 'biography'}
+
+def iter_section_names(node):
+    """Recorre secciones Y subsecciones (anidadas en has_parts) devolviendo sus nombres."""
+    if isinstance(node, list):
+        for item in node:
+            yield from iter_section_names(item)
+    elif isinstance(node, dict):
+        name = node.get("name")
+        if isinstance(name, str):
+            yield name
+        for key in ("has_parts", "parts"):
+            if key in node:
+                yield from iter_section_names(node[key])
+
 def has_biography_section(sections):
     if not isinstance(sections, str):
         return False
-    section_names =  [section.get("name", "").lower() for section in json.loads(sections)]
-    for biography_section_name in BIOGRAPHY_SECTION_NAMES:
-        if biography_section_name in section_names:
-            return True
-    return False
+    section_names = {name.strip().lower() for name in iter_section_names(json.loads(sections))}
+    return not BIOGRAPHY_SECTION_NAMES.isdisjoint(section_names)
 
 # Agrego una columna al df original y que tiene solo el año
 df['date_modified_year'] = df['date_modified'].dt.year
@@ -236,18 +247,3 @@ with open(CONTROL_FILE_Q5, "w", encoding="utf-8") as file:
         file.write(f'"{url}",{wordcount}\n')
 
 print("Q5 listo", flush=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

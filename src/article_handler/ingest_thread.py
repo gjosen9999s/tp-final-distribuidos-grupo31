@@ -91,16 +91,18 @@ class IngestThread(threading.Thread):
         self._executor.shutdown(wait=False, cancel_futures=True)
 
     def join_workers(self):
+        # Bloquea hasta que terminen los workers en ejecución
         self._executor.shutdown(wait=True)
 
     def _on_client_done(self, future: Future, session):
+        # Si la tarea fue cancelada en el shutdown, _handle_client no corrió su `finally`, así que liberamos la sesión acá
         if future.cancelled():
             logger.info(f"[IngestThread] Cliente ID={session.client_id} descartado: shutdown antes de ser atendido.")
             self.sessions.unregister_session(session.client_id)
 
     @staticmethod
     def _enable_keepalive(sock: socket.socket) -> None:
-        # Activa TCP keepalive en el socket del cliente
+        # Activa TCP keepalive en el socket del cliente (best-effort)
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, KEEPALIVE_IDLE_S)
