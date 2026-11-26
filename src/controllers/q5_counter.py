@@ -58,6 +58,8 @@ class Q5Counter(Controller):
             controller_count=self.controller_count,
             control_out=self.control_out,
             done_sender=self._send_done,
+            origin_node=self.origin_node,
+            next_msg_seq=self.next_msg_seq,
         )
 
         logger.info(
@@ -78,14 +80,16 @@ class Q5Counter(Controller):
             if word_count > 0 and article.dateModified and article.dateModified > 0:
                 year = article.year
                 if year is not None and year <= 2020:
+                    msg_seq = self.next_msg_seq(client_id)
                     self.out_mw.send(
-                        internal.serialize_wordcount_sum(client_id, word_count)
+                        internal.serialize_wordcount_sum(client_id, self.origin_node, msg_seq, word_count)
                     )
                     self._counts[(client_id, "sum")] += 1
                 elif year is not None and year >= 2021:
+                    msg_seq = self.next_msg_seq(client_id)
                     self.out_cand_mw.send(
                         internal.serialize_wordcount_cand(
-                            client_id, word_count, article.docId, article.url
+                            client_id, self.origin_node, msg_seq, word_count, article.docId, article.url
                         )
                     )
                     self._counts[(client_id, "cand")] += 1
@@ -119,11 +123,31 @@ class Q5Counter(Controller):
             cand_qty,
         )
 
+        msg_seq = self.next_msg_seq(client_id)
+
         # Un DONE para Q5_Sum
-        self.out_mw.send(control.serialize_done(client_id,CTRL_Q5_COUNTER, self.node_id,sum_qty,))
-        
+        self.out_mw.send(
+            control.serialize_done(
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q5_COUNTER,
+                self.node_id,
+                sum_qty,
+            )
+        )
+
         # Un DONE para Q5_Cand
-        self.out_cand_mw.send(control.serialize_done(client_id,CTRL_Q5_COUNTER,self.node_id,cand_qty,))
+        self.out_cand_mw.send(
+            control.serialize_done(
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q5_COUNTER,
+                self.node_id,
+                cand_qty,
+            )
+        )
 
     @staticmethod
     def _count_words(abstract):

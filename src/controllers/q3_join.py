@@ -62,15 +62,15 @@ class Q3Join(Controller):
                 msg_type, client_id, message = control.deserialize(body)
                 self._handle_done(msg_type, client_id, message)
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.Q3_PARTIAL:
                     raise ValueError(f"tipo inesperado para Q3 Join: {msg_type}")
-                self._handle_partial(client_id, message["words"])
+                self._handle_partial(client_id, origin_node, msg_seq, message["words"])
             ack()
         except Exception:
             nack()
 
-    def _handle_partial(self, client_id, words):
+    def _handle_partial(self, client_id, origin_node, msg_seq, words):
         
         with self._lock:
             state = self._state(client_id)
@@ -140,9 +140,10 @@ class Q3Join(Controller):
         )
 
         payload = external.serialize_q3_payload(words)
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             internal.serialize_result_message(
-                client_id,
+                client_id, self.origin_node, msg_seq,
                 ResultType.Q3,
                 0,
                 0,
@@ -151,9 +152,15 @@ class Q3Join(Controller):
             )
         )
         # Avisamos al ArticleHandler que Q3 terminó.
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             control.serialize_done(
-                client_id, CTRL_Q3_JOIN, self.node_id, 1
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q3_JOIN,
+                self.node_id,
+                1,
             )
         )
         state.closed = True

@@ -113,10 +113,12 @@ class Q5AverageNFilter(Controller):
                 if msg_type == ControlType.DONE and message.get("controllerType") == CTRL_Q5_COUNTER:
                     self._handle_counter_done(client_id, message["nodeId"])
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type == InternalType.WORDCOUNT_CAND:
                     self._handle_candidate(
                         client_id,
+                        origin_node,
+                        msg_seq,
                         message["url"],
                         message["wordCount"],
                         message["docId"],
@@ -138,10 +140,12 @@ class Q5AverageNFilter(Controller):
                 if msg_type == ControlType.DONE and message.get("controllerType") == CTRL_Q5_ACCUMULATOR:
                     self._handle_accumulator_done(client_id, message["nodeId"])
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type == InternalType.Q5_ACC_PARTIAL:
                     self._handle_acc_partial(
-                        client_id,
+                        client_id, 
+                        origin_node, 
+                        msg_seq,
                         message["totalSum"],
                         message["count"],
                     )
@@ -154,7 +158,7 @@ class Q5AverageNFilter(Controller):
             logger.exception("Error procesando mensaje en q5_average_n_filter (cola acumuladores)")
             nack()
 
-    def _handle_candidate(self, client_id, url, word_count, doc_id):
+    def _handle_candidate(self, client_id, origin_node, msg_seq, url, word_count, doc_id):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
@@ -170,7 +174,7 @@ class Q5AverageNFilter(Controller):
                 )
             self._emit_if_ready(client_id, state)
 
-    def _handle_acc_partial(self, client_id, total_sum, count):
+    def _handle_acc_partial(self, client_id, origin_node, msg_seq, total_sum, count):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
@@ -257,10 +261,13 @@ class Q5AverageNFilter(Controller):
         )
 
         for url, wc, doc_id in matching:
+            
             payload = external.serialize_q5_payload(url, wc)
+            msg_seq = self.next_msg_seq(client_id)
+            
             self.out_mw.send(
                 internal.serialize_result_message(
-                    client_id,
+                    client_id, self.origin_node, msg_seq,
                     ResultType.Q5,
                     doc_id,
                     0,
@@ -269,9 +276,12 @@ class Q5AverageNFilter(Controller):
                 )
             )
 
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             control.serialize_done(
                 client_id,
+                self.origin_node,
+                msg_seq,
                 CTRL_Q5_AVG_FILTER,
                 self.node_id,
                 len(matching),
