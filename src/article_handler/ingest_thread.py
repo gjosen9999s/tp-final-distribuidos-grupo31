@@ -1,16 +1,25 @@
 """Recibe los batches y los reparte a las colas internas."""
+import logging
 import socket
 import threading
-import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
+
 from common.protocol.constants import (
-    ART_DOCID, ART_NAME, ART_URL, ART_DATE_MODIFIED,
-    ART_IN_LANGUAGE, ART_SECTIONS_FLAGS, ART_ABSTRACT, ART_IMAGE_URL, ExternalType
+    ART_DOCID, 
+    ART_NAME, 
+    ART_URL, 
+    ART_DATE_MODIFIED,
+    ART_IN_LANGUAGE, 
+    ART_SECTIONS_FLAGS, 
+    ART_ABSTRACT, 
+    ART_IMAGE_URL, 
+    ExternalType
 )
+from common.protocol.control import serializer as control
 from common.protocol.external import framing, serializer as external
 from common.protocol.internal import serializer as internal
-from common.protocol.control import serializer as control
+
 
 logger = logging.getLogger("IngestThread")
 READY_FILE = "/tmp/article_handler_ready"
@@ -30,6 +39,7 @@ class IngestThread(threading.Thread):
     def __init__(self, host: str, port: int, sessions, data_queues, logger_client=None, stop_event=None,
                  max_workers: int = DEFAULT_MAX_WORKERS):
         super().__init__(daemon=True)
+        self.origin_node = 0
         self.host = host
         self.port = port
         self.sessions = sessions
@@ -37,6 +47,7 @@ class IngestThread(threading.Thread):
             self.data_queues = list(data_queues.values())
         else:
             self.data_queues = list(data_queues)
+
         self.logger_client = logger_client
         self.stop_event = stop_event or threading.Event()
         self.server_socket = None
@@ -128,6 +139,7 @@ class IngestThread(threading.Thread):
         client_id = session.client_id
         sock = session.sock
         total_articles = 0
+        article_seq = 0
         eof_received = False
 
         try:
@@ -141,10 +153,19 @@ class IngestThread(threading.Thread):
                 msg_type, data = external.deserialize_message(payload)
 
                 if msg_type == ExternalType.BATCH:
+                    
                     for article in data:
+                        
+                        article_seq += 1
+
                         internal_msg = internal.serialize_article_message(
-                            client_id, article, FULL_ARTICLE_MASK
+                            client_id,
+                            self.origin_node,
+                            article_seq,
+                            article,
+                            FULL_ARTICLE_MASK,
                         )
+
                         with self.send_lock:
                             for queue in self.data_queues:
                                 queue.send(internal_msg)
