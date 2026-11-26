@@ -31,6 +31,8 @@ class GroupCoordinator:
         controller_count,
         control_out,
         done_sender,
+        origin_node,
+        next_msg_seq,
     ):
         self.controller_type = controller_type
         self.node_id = node_id
@@ -40,6 +42,8 @@ class GroupCoordinator:
         self.done_sender = done_sender
         self._states = {}
         self._lock = threading.Lock()
+        self.origin_node = origin_node
+        self.next_msg_seq = next_msg_seq
 
     def _state(self, client_id):
         state = self._states.get(client_id)
@@ -91,7 +95,15 @@ class GroupCoordinator:
         # El EOF llega in-band por una sola réplica de datos; desde acá
         # se republica al control para que lo vea toda la etapa.
         if not from_control:
-            self.control_out.send(control.serialize_eof(client_id, total))
+            msg_seq = self.next_msg_seq(client_id)
+            self.control_out.send(
+                control.serialize_eof(
+                    client_id,
+                    self.origin_node,
+                    msg_seq,
+                    total,
+                )
+            )
         self._evaluate(client_id, state)
 
     def _on_flush(self, client_id, state):
@@ -109,7 +121,15 @@ class GroupCoordinator:
             threshold = state.total - self.progress_batch_size * self.controller_count
             if state.sum >= threshold:
                 state.flush_id += 1
-                self.control_out.send(control.serialize_flush(client_id, state.flush_id))
+                msg_seq = self.next_msg_seq(client_id)
+                self.control_out.send(
+                    control.serialize_flush(
+                        client_id,
+                        self.origin_node,
+                        msg_seq,
+                        state.flush_id,
+                    )
+                )
                 state.flushed = True
 
         if state.sum == state.total:
@@ -117,8 +137,9 @@ class GroupCoordinator:
             state.closed = True
 
     def _send_progress(self, client_id, quantity):
+        msg_seq = self.next_msg_seq(client_id)
         self.control_out.send(
             control.serialize_progress(
-                client_id, self.controller_type, self.node_id, quantity
+                client_id, self.origin_node, msg_seq, self.controller_type, self.node_id, quantity
             )
         )

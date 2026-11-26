@@ -34,6 +34,8 @@ class Q2Filter(Controller):
             controller_count=self.controller_count,
             control_out=self.control_out,
             done_sender=self._send_done,
+            origin_node=self.origin_node,
+            next_msg_seq=self.next_msg_seq,
         )
         logger.info(
             f"[Q2Filter] Iniciado nodo {self.node_id}/{self.controller_count} "
@@ -45,8 +47,16 @@ class Q2Filter(Controller):
             f"[Q2Filter] Cliente ID={client_id} cerrado: enviando DONE "
             f"(nodo {self.node_id}, {quantity} resultados emitidos)"
         )
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
-            control.serialize_done(client_id, CTRL_Q2_FILTER, self.node_id, quantity)
+            control.serialize_done(
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q2_FILTER,
+                self.node_id,
+                quantity,
+            )
         )
 
     def handle_article(self, client_id, article):
@@ -111,9 +121,10 @@ class Q2Filter(Controller):
         ]
         for part_id, chunk in enumerate(parts):
             flags = FLAG_IS_LAST_PART if part_id == len(parts) - 1 else 0
+            msg_seq = self.next_msg_seq(client_id)
             self.out_mw.send(
                 internal.serialize_result_message(
-                    client_id, ResultType.Q2, article.docId, part_id, flags, chunk
+                    client_id, self.origin_node, msg_seq, ResultType.Q2, article.docId, part_id, flags, chunk
                 )
             )
 

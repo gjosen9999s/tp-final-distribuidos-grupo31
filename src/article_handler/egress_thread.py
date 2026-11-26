@@ -66,7 +66,7 @@ class EgressThread(threading.Thread):
                             )
                 ack()
             else:
-                msg_type, client_id, result = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, result = internal.deserialize(body)
                 if msg_type == InternalType.RESULT:
                     session = self.sessions.get_session(client_id)
                     if session:

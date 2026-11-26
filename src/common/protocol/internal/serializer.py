@@ -105,10 +105,11 @@ def serialize_article_message(client_id, origin_node, msg_seq, article, mask):
     )
 
 
-def serialize_result_message(client_id, result_type, doc_id, part_id, flags, payload):
+def serialize_result_message(client_id, origin_node, msg_seq, result_type, doc_id, part_id, flags, payload):
     return (
         serialize_uint8(INT_RESULT)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_uint8(result_type)
         + serialize_uint32(doc_id)
         + serialize_uint32(part_id)
@@ -117,22 +118,24 @@ def serialize_result_message(client_id, result_type, doc_id, part_id, flags, pay
     )
 
 
-def serialize_wordcount_sum(client_id: int, word_count: int) -> bytes:
+def serialize_wordcount_sum(client_id: int, origin_node, msg_seq, word_count: int) -> bytes:
     """WORDCOUNT_SUM: conteo de palabras únicas de un artículo ≤2020."""
     return (
         serialize_uint8(INT_WORDCOUNT_SUM)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_uint32(word_count)
     )
 
 
 def serialize_wordcount_cand(
-    client_id: int, word_count: int, doc_id: int, url: str
+    client_id: int, origin_node, msg_seq, word_count: int, doc_id: int, url: str
 ) -> bytes:
     """WORDCOUNT_CAND: conteo + identificador de un artículo candidato ≥2021."""
     return (
         serialize_uint8(INT_WORDCOUNT_CAND)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_uint32(word_count)
         + serialize_uint32(doc_id)
         + serialize_string(url)
@@ -140,12 +143,13 @@ def serialize_wordcount_cand(
 
 
 def serialize_q5_acc_partial(
-    client_id: int, total_sum: int, count: int
+    client_id: int, origin_node, msg_seq, total_sum: int, count: int
 ) -> bytes:
     """Q5_ACC_PARTIAL: (sum, count) de articulos de antes del 2020 para el Q5_AVG_Filter."""
     return (
         serialize_uint8(INT_Q5_ACC_PARTIAL)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_uint32(total_sum)
         + serialize_uint32(count)
     )
@@ -170,9 +174,12 @@ def deserialize(payload):
 
     # [1B tipo=10][4B clientId][1B resultType][4B docId][4B partId][1B flags][4B len payload][payload]
     if msg_type == InternalType.RESULT:
+        origin_node, msg_seq = read_internal_header(reader)
         return (
             InternalType.RESULT,
             client_id,
+            origin_node,
+            msg_seq,
             {
                 "resultType": reader.uint8(),
                 "docId": reader.uint32(),
@@ -201,26 +208,42 @@ def deserialize(payload):
         "wordlist": deserialize_stringlist(reader.bytes()),
     }
 
-    # [1B tipo=7][4B clientId][4B len words][ [4B len word][word] ... ]
+    # [1B tipo=7][4B clientId][2B originNode][4B MsgSeq][4B len words][ [4B len word][word] ... ]
     if msg_type == InternalType.Q3_PARTIAL:
-        return InternalType.Q3_PARTIAL, client_id, {
-            "words": reader.list(lambda current: current.string()),
-        }
+        origin_node, msg_seq = read_internal_header(reader)
+        return (
+            InternalType.Q3_PARTIAL,
+            client_id,
+            origin_node,
+            msg_seq,
+            {"words": reader.list(lambda current: current.string())},
+        )
     
-    # [1B tipo=8][4B clientId][2B nodeId][4B len pairs][ [4B len word][word][4B count] ... ]
+    # [1B tipo=8][4B clientId][2B originNode][4B MsgSeq][2B nodeId][4B len pairs][ [4B len word][word][4B count] ... ]
     if msg_type == InternalType.Q4_PARTIAL:
-        return InternalType.Q4_PARTIAL, client_id, {
-            "nodeId": reader.uint16(),
-            "pairs": reader.list(read_word_count),
-        }
+        origin_node, msg_seq = read_internal_header(reader)
+        return (
+            InternalType.Q4_PARTIAL,
+            client_id,
+            origin_node,
+            msg_seq,
+            {
+                "nodeId": reader.uint16(),
+                "pairs": reader.list(read_word_count),
+            },
+        )
 
     if msg_type == InternalType.WORDCOUNT_SUM:
-        return InternalType.WORDCOUNT_SUM, client_id, {"wordCount": reader.uint32()}
+        origin_node, msg_seq = read_internal_header(reader)
+        return ( InternalType.WORDCOUNT_SUM, client_id, origin_node, msg_seq, {"wordCount": reader.uint32()} )
 
     if msg_type == InternalType.WORDCOUNT_CAND:
+        origin_node, msg_seq = read_internal_header(reader)
         return (
             InternalType.WORDCOUNT_CAND,
-            client_id,
+            client_id, 
+            origin_node,
+            msg_seq,
             {
                 "wordCount": reader.uint32(),
                 "docId": reader.uint32(),
@@ -229,9 +252,12 @@ def deserialize(payload):
         )
 
     if msg_type == InternalType.Q5_ACC_PARTIAL:
+        origin_node, msg_seq = read_internal_header(reader)
         return (
             InternalType.Q5_ACC_PARTIAL,
-            client_id,
+            client_id, 
+            origin_node,
+            msg_seq,
             {
                 "totalSum": reader.uint32(),
                 "count": reader.uint32(),
@@ -274,18 +300,20 @@ def serialize_wordlist_q4_message(client_id, origin_node, msg_seq, doc_id, wordl
     )
 
 
-def serialize_q3_partial_message(client_id, words):
+def serialize_q3_partial_message(client_id, origin_node, msg_seq, words):
     return (
         serialize_uint8(INT_Q3_PARTIAL)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_list(words, serialize_string)
     )
 
 
-def serialize_q4_partial_message(client_id, node_id, pairs):
+def serialize_q4_partial_message(client_id, origin_node, msg_seq, node_id, pairs):
     return (
         serialize_uint8(INT_Q4_PARTIAL)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_uint16(node_id)
         + serialize_q4_payload(pairs)
     )

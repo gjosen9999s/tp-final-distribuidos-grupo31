@@ -175,7 +175,13 @@ class IngestThread(threading.Thread):
 
                 elif msg_type == ExternalType.EOF:
                     expected_total = data.get("totalArticles", total_articles) if isinstance(data, dict) else total_articles
-                    eof_msg = control.serialize_eof(client_id, expected_total)
+                    eof_seq = article_seq + 1
+                    eof_msg = control.serialize_eof(
+                        client_id,
+                        self.origin_node,
+                        eof_seq,
+                        expected_total,
+                    )
 
                     with self.send_lock:
                         for queue in self.data_queues:

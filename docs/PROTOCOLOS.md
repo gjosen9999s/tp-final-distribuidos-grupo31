@@ -124,7 +124,7 @@ Los mensajes internos que ya tienen identidad de mensaje llevan:
 - `msgSeq` es una secuencia por `(originNode, clientId)`.
 - La clave para reconocer una reentrega es `(originNode, clientId, msgSeq)`.
 
-Hoy el header está aplicado a `ARTICLE`, `WORD_Q3` y `WORD_Q4`. El resto de los mensajes internos se migra con el mismo formato.
+Hoy el header está aplicado a todos los mensajes internos de datos: `ARTICLE`, `WORD_Q3`, `WORD_Q4`, `Q3_PARTIAL`, `Q4_PARTIAL`, `WORDCOUNT_SUM`, `WORDCOUNT_CAND`, `Q5_ACC_PARTIAL` y `RESULT`.
 
 El serializer no deduplica. Solo transporta los IDs. El consumidor es el que consulta su estado y decide si el mensaje ya fue procesado.
 
@@ -292,12 +292,22 @@ Para Q1, el cliente formatea `dateModified` (epoch UTC) a la fecha/hora de salid
 
 ## 3. Protocolo de control
 
-Es el que coordina el cierre de cada etapa. **Todo va por `clientId`** y usa el mismo envelope de la sección 2:
+Es el que coordina el cierre de cada etapa. **Todo va por `clientId`** y usa el mismo header que los mensajes de datos:
 
 ```
 [1B type]
 [4B clientId]
+[2B originNode]
+[4B msgSeq]
 [body]
+```
+
+El `originNode` y el `msgSeq` identifican al emisor. El `msgSeq` se comparte con los mensajes de datos de ese mismo controller, así que no hay dos secuencias distintas para la misma instancia.
+
+La clave para descartar un control repetido es:
+
+```
+(originNode, clientId, msgSeq)
 ```
 
 ### Tipos

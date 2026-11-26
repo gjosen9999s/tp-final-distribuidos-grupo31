@@ -21,14 +21,10 @@ WORD_REGEX = r"\b\w+\b"
 NUMBER_REGEX = r"[+-]?((\d+\.?\d*)|(\.\d+))"
 logger = logging.getLogger("tokenizer")
 PROGRESS_EVERY = 5000
-ORIGIN_TOKENIZER_BASE = 30
 
 class Tokenizer(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.origin_node = ORIGIN_TOKENIZER_BASE + self.node_id
-        self._msg_seq = Counter()
 
         self.partitions = int(os.getenv("PARTITIONS", "1"))
         self.q4_enabled = os.getenv("Q4_ENABLED", "1") != "0"
@@ -61,6 +57,8 @@ class Tokenizer(Controller):
             controller_count=self.controller_count,
             control_out=self.control_out,
             done_sender=self._send_done,
+            origin_node=self.origin_node,
+            next_msg_seq=self.next_msg_seq,
         )
 
         logger.info(
@@ -94,8 +92,7 @@ class Tokenizer(Controller):
                 if len(wordlist[i])==0:
                     continue 
 
-                self._msg_seq[client_id] += 1
-                msg_seq = self._msg_seq[client_id]
+                msg_seq = self.next_msg_seq(client_id)
                 
                 self._counts[(client_id, "q3", i)] += len(wordlist[i])
                 self.q3_queues[i].send(
@@ -152,9 +149,12 @@ class Tokenizer(Controller):
         # Un DONE por cola de q3/particion con la cantidad enviada (msg) a esa cola.
         
         for index, queue in enumerate(self.q3_queues):
+            msg_seq = self.next_msg_seq(client_id)
             queue.send(
                 control.serialize_done(
                     client_id,
+                    self.origin_node,
+                    msg_seq,
                     CTRL_TOKENIZER,
                     self.node_id,
                     self._counts[(client_id, "q3", index)],
@@ -163,9 +163,12 @@ class Tokenizer(Controller):
 
         # Un DONE por cola de q4/particion con la cantidad enviada (msg) a esa cola.
         for index, queue in enumerate(self.q4_queues):
+            msg_seq = self.next_msg_seq(client_id)
             queue.send(
                 control.serialize_done(
                     client_id,
+                    self.origin_node,
+                    msg_seq,
                     CTRL_TOKENIZER,
                     self.node_id,
                     self._counts[(client_id, "q4", index)],
