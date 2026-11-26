@@ -83,16 +83,16 @@ class Q4Counter(Controller):
                 msg_type, client_id, message = control.deserialize(body)
                 self._handle_done(msg_type, client_id, message)
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q4:
                     raise ValueError(f"tipo inesperado para Q4 Counter: {msg_type}")
-                self._handle_wordlist(client_id, message["wordlist"])
+                self._handle_wordlist(client_id, origin_node, msg_seq, message["wordlist"])
             ack()
         except Exception:
             logger.exception(f"[Q4Counter] Error procesando mensaje (nodo {self.node_id})")
             nack()
 
-    def _handle_wordlist(self, client_id, wordlist):
+    def _handle_wordlist(self, client_id, origin_node, msg_seq, wordlist):
         with self._lock:
             state = self._state(client_id)
             if state.closed:

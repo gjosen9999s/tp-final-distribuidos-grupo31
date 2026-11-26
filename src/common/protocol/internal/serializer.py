@@ -35,6 +35,23 @@ from ..external.serializer import (
     deserialize_stringlist
 )
 
+def serialize_internal_header(origin_node: int, msg_seq: int) -> bytes:
+    
+    if origin_node < 0 or origin_node > 0xFFFF:
+        raise ValueError("origin_node inválido")
+
+    if msg_seq < 0 or msg_seq > 0xFFFFFFFF:
+        raise ValueError("msg_seq inválido")
+
+    return serialize_uint16(origin_node) + serialize_uint32(msg_seq)
+
+def read_internal_header(reader: Reader) -> tuple[int, int]:
+
+    origin_node = reader.uint16()
+    msg_seq = reader.uint32()
+    
+    return origin_node, msg_seq
+
 
 def serialize_article(article, mask):
     out = bytearray(serialize_uint8(mask))
@@ -79,10 +96,11 @@ def deserialize_article(reader):
     return Article(**values)
 
 
-def serialize_article_message(client_id, article, mask):
+def serialize_article_message(client_id, origin_node, msg_seq, article, mask):
     return (
         serialize_uint8(INT_ARTICLE)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_article(article, mask)
     )
 
@@ -139,9 +157,16 @@ def deserialize(payload):
     msg_type = reader.uint8()
     client_id = reader.uint32()
 
-    # [1B tipo=1][4B clientId][1B mask][campos según mask]
+    # [1B tipo=1][4B clientId][ [2B origin node][4B msg seq] ][1B mask][campos según mask]
     if msg_type == InternalType.ARTICLE:
-        return InternalType.ARTICLE, client_id, deserialize_article(reader)
+        origin_node, msg_seq = read_internal_header(reader)
+        return (
+            InternalType.ARTICLE,
+            client_id,
+            origin_node,
+            msg_seq,
+            deserialize_article(reader),
+        )
 
     # [1B tipo=10][4B clientId][1B resultType][4B docId][4B partId][1B flags][4B len payload][payload]
     if msg_type == InternalType.RESULT:
@@ -156,16 +181,22 @@ def deserialize(payload):
                 "payload": reader.bytes(),
             },
         )
-    # [1B tipo=2][4B clientId][4B len wordlist][word|word|...|word][1B inLanguage]
+    # [1B tipo=2][4B clientId][2B originNode][4B MsgSeq][4B len wordlist][word|word|...|word][1B inLanguage]
     if msg_type == InternalType.WORD_Q3:
-        return InternalType.WORD_Q3, client_id, {
+        
+        origin_node, msg_seq = read_internal_header(reader)
+
+        return InternalType.WORD_Q3, client_id, origin_node, msg_seq, {
             "wordlist": deserialize_stringlist(reader.bytes()),
             "inLanguage": reader.uint8(),
         }
 
-    # [1B type=3][4B clientId][4B docId][4B len wordlist][word|word|...|word]
+    # [1B type=3][4B clientId][2B originNode][4B MsgSeq][4B docId][4B len wordlist][word|word|...|word]
     if msg_type == InternalType.WORD_Q4:
-        return InternalType.WORD_Q4, client_id, {
+
+        origin_node, msg_seq = read_internal_header(reader)
+        
+        return InternalType.WORD_Q4, client_id, origin_node, msg_seq, {
         "docId": reader.uint32(),
         "wordlist": deserialize_stringlist(reader.bytes()),
     }
@@ -216,10 +247,11 @@ def serialize_word_q3_message(client_id, word, in_language):
         + serialize_uint8(in_language)
     )
 
-def serialize_wordlist_q3_message(client_id, wordlist, in_language):
+def serialize_wordlist_q3_message(client_id, origin_node, msg_seq, wordlist, in_language):
     return (
         serialize_uint8(INT_WORD_Q3)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_stringlist(wordlist)
         + serialize_uint8(in_language)
     )
@@ -232,10 +264,11 @@ def serialize_word_q4_message(client_id, doc_id, word):
         + serialize_string(word)
     )
 
-def serialize_wordlist_q4_message(client_id, doc_id, wordlist):
+def serialize_wordlist_q4_message(client_id, origin_node, msg_seq, doc_id, wordlist):
     return (
         serialize_uint8(INT_WORD_Q4)
         + serialize_uint32(client_id)
+        + serialize_internal_header(origin_node, msg_seq)
         + serialize_uint32(doc_id)
         + serialize_stringlist(wordlist)
     )

@@ -97,7 +97,10 @@ Cada `Article` se manda una sola vez y el AH lo proyecta por query.
 
 - El **clientId** lo asigna el `session_manager` del AH al aceptar la conexión. No viaja en el protocolo.
 - El AH tiene dos hilos: `ingest_thread` (lee batches y manda ACK) y `egress_thread` (manda RESULT). Como escriben por el mismo socket, hay un lock de escritura.
-- El cliente tiene un reader thread que demuxa ACK / RESULT / ERROR. El sender espera el ACK de cada batch.
+- El cliente puede recibir resultados Q1/Q2 en streaming mientras todavía está mandando batches. El sender lee frames hasta encontrar el ACK del batch; si aparece un RESULT Q1/Q2, lo deriva al receiver. Después del EOF, el receiver sigue leyendo hasta `isSessionEnd`.
+
+Q1/Q2 se envían apenas están listos, aunque el cliente todavía esté enviando lotes. Q3/Q4/Q5 se mantienen en el buffer del ArticleHandler hasta el EOF, porque recién ahí terminan sus joins.
+
 
 ---
 
@@ -107,17 +110,25 @@ Es el que usan los procesos entre sí, por **RabbitMQ**.
 
 ### Envelope común
 
-Todo mensaje interno arranca igual:
+Los mensajes internos que ya tienen identidad de mensaje llevan:
 
 ```
 [1B type]
-[4B clientId]          # numérico, lo asigna el AH
+[4B clientId]
+[2B originNode]
+[4B msgSeq]
 [body]
 ```
 
-- `type` identifica el tipo (tabla abajo). Los de datos van de 1 a 10; los de control, de 101 a 104.
-- `clientId` es numérico (`u32`) y va en **todos** los mensajes internos.
-- Si `type >= 101`, el mensaje es de control (sección 3).
+- `originNode` identifica quién generó el mensaje. El ArticleHandler usa `0`; cada etapa usa una base distinta sumada a su `NODE_ID`. Por ejemplo, los tokenizers usan `30 + NODE_ID`.
+- `msgSeq` es una secuencia por `(originNode, clientId)`.
+- La clave para reconocer una reentrega es `(originNode, clientId, msgSeq)`.
+
+Hoy el header está aplicado a `ARTICLE`, `WORD_Q3` y `WORD_Q4`. El resto de los mensajes internos se migra con el mismo formato.
+
+El serializer no deduplica. Solo transporta los IDs. El consumidor es el que consulta su estado y decide si el mensaje ya fue procesado.
+
+Si `type >= 101`, el mensaje es de control (sección 3).
 
 ### Primitivas
 
@@ -181,7 +192,7 @@ Máscaras que usa el ArticleHandler:
 | Cola | Campos |
 |---|---|
 | `Q1_Metadata` | docId, url, dateModified, inLanguage |
-| `Q2_Sections` | docId, name, url, dateModified, sections_flags, imageUrl |
+| `Q2_Metadata` | docId, name, url, dateModified, sections_flags, imageUrl |
 | `Q34_Abstract` | docId, inLanguage, abstract |
 | `Q5_Abstract` | docId, url, dateModified, abstract |
 
@@ -193,15 +204,15 @@ Q2/Q5 filtran por el año derivado.
 ### `WORD_Q3` (2)
 
 ```
-word:        string
+wordlist:    list<string>
 inLanguage:  u8      # 0 = en, 1 = fr
 ```
 
 ### `WORD_Q4` (3)
 
 ```
-docId:  u32
-word:   string
+docId:     u32
+wordlist:  list<string>
 ```
 
 ### `IMG_REQ` (4)
@@ -260,7 +271,7 @@ El `payload` depende de `resultType`:
 | Query | Payload |
 |---|---|
 | Q1 | `url: string`, `dateModified: u32` (epoch UTC) |
-| Q2 | `name: string`, `url: string`, `chunk: bytes` |
+| Q2 | `name: string`, `url: string`, `imageUrl: string`, `image: bytes` |
 | Q3 | `list<string>` de palabras |
 | Q4 | `list< [string word][u32 count] >` |
 | Q5 | `list< [string url][u32 wordCount] >` |

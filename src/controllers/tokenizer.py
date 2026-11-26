@@ -21,11 +21,14 @@ WORD_REGEX = r"\b\w+\b"
 NUMBER_REGEX = r"[+-]?((\d+\.?\d*)|(\.\d+))"
 logger = logging.getLogger("tokenizer")
 PROGRESS_EVERY = 5000
-
+ORIGIN_TOKENIZER_BASE = 30
 
 class Tokenizer(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.origin_node = ORIGIN_TOKENIZER_BASE + self.node_id
+        self._msg_seq = Counter()
 
         self.partitions = int(os.getenv("PARTITIONS", "1"))
         self.q4_enabled = os.getenv("Q4_ENABLED", "1") != "0"
@@ -90,11 +93,14 @@ class Tokenizer(Controller):
                 # Si la lista esta vacia, no mandamos nada
                 if len(wordlist[i])==0:
                     continue 
-                    
+
+                self._msg_seq[client_id] += 1
+                msg_seq = self._msg_seq[client_id]
+                
                 self._counts[(client_id, "q3", i)] += len(wordlist[i])
                 self.q3_queues[i].send(
                     internal.serialize_wordlist_q3_message(
-                        client_id, wordlist[i], article.inLanguage
+                        client_id, self.origin_node, msg_seq, wordlist[i], article.inLanguage
                     )
                 )
 
@@ -102,8 +108,8 @@ class Tokenizer(Controller):
                     self._counts[(client_id, "q4", i)] += len(wordlist[i])
                     self.q4_queues[i].send(
                         internal.serialize_wordlist_q4_message(
-                            client_id, article.docId, wordlist[i]
-                            )
+                            client_id, self.origin_node, msg_seq, article.docId, wordlist[i]
+                            ) # Mismo msg_seq para Q3 y Q4
                         )
                     
             # El group cuenta los artículos procesados (EOF, PROGRESS, FLUSH).

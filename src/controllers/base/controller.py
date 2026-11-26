@@ -73,7 +73,7 @@ class Controller(ABC):
                 msg_type, client_id, message = control.deserialize(body)
                 self.handle_control(msg_type, client_id, message, False)
             else:
-                msg_type, client_id, article = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, article = internal.deserialize(body)
                 if msg_type != InternalType.ARTICLE:
                     raise ValueError(f"tipo interno inesperado: {msg_type}")
                 self.handle_article(client_id, article)
