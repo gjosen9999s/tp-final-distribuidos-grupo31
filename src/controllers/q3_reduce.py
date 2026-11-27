@@ -65,17 +65,17 @@ class Q3Reduce(Controller):
                 msg_type, client_id, message = control.deserialize(body)
                 self._handle_done(msg_type, client_id, message)
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q3:
                     raise ValueError(f"tipo inesperado para Q3 Reduce: {msg_type}")
                 self._handle_wordlist(
-                    client_id, message["wordlist"], message["inLanguage"]
+                    client_id, origin_node, msg_seq, message["wordlist"], message["inLanguage"]
                 )
             ack()
         except Exception:
             nack()
 
-    def _handle_wordlist(self, client_id, wordlist, in_language):
+    def _handle_wordlist(self, client_id, origin_node, msg_seq, wordlist, in_language):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
@@ -161,13 +161,21 @@ class Q3Reduce(Controller):
             len(state.dones),
         )
 
-        self.out_mw.send(
-            internal.serialize_q3_partial_message(client_id, words)
-        )
+        msg_seq = self.next_msg_seq(client_id)
 
         self.out_mw.send(
+            internal.serialize_q3_partial_message(client_id, self.origin_node, msg_seq, words)
+        )
+
+        msg_seq = self.next_msg_seq(client_id)
+        self.out_mw.send(
             control.serialize_done(
-                client_id, CTRL_Q3_REDUCE, self.node_id, 1
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q3_REDUCE,
+                self.node_id,
+                1,
             )
         )
         state.closed = True

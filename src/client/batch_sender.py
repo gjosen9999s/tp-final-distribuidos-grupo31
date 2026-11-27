@@ -7,7 +7,7 @@ import json
 import logging
 import socket
 from datetime import datetime, timezone
-from typing import Any, List
+from typing import Any, Callable, List, Optional
 
 from common.protocol.constants import (
     LANG_EN,
@@ -23,6 +23,19 @@ logger = logging.getLogger(__name__)
 LANG_CODES = {"en": LANG_EN, "fr": LANG_FR}
 
 
+def _walk_sections(node):
+    if isinstance(node, list):
+        for item in node:
+            yield from _walk_sections(item)
+    elif isinstance(node, dict):
+        name = node.get("name")
+        if isinstance(name, str) and name.strip():
+            yield name
+        for key in ("has_parts", "parts"):
+            if key in node:
+                yield from _walk_sections(node[key])
+
+
 def _iter_section_names(value):
     if value is None:
         return
@@ -31,27 +44,12 @@ def _iter_section_names(value):
         if not text:
             return
         try:
-            parsed = json.loads(text)
+            value = json.loads(text)
         except (ValueError, TypeError):
+            # String que no es JSON: se toma como el nombre de una única sección.
             yield text
             return
-        yield from _iter_section_names(parsed)
-        return
-    if isinstance(value, dict):
-        name = value.get("name")
-        if isinstance(name, str) and name.strip():
-            yield name
-        for key in ("has_parts", "parts"):
-            if key in value:
-                yield from _iter_section_names(value[key])
-                return
-        if "name" not in value:
-            for item in value.values():
-                yield from _iter_section_names(item)
-        return
-    if isinstance(value, (list, tuple)):
-        for item in value:
-            yield from _iter_section_names(item)
+    yield from _walk_sections(value)
 
 
 def _sections_flags(value):
@@ -101,11 +99,20 @@ class BatchSender:
         "inLanguage", "sectionsFlags", "abstract", "imageUrl"
     }
 
-    def __init__(self, sock: socket.socket) -> None:
+    def __init__(
+        self,
+        sock: socket.socket,
+        on_frame: Optional[Callable[[bytes], bool]] = None,
+    ) -> None:
         """
         Inicializa el sender recibiendo el socket ya conectado y configurado.
+
+        `on_frame` procesa los frames que no son ACK y llegan mientras se espera el ACK de un
+        envío (resultados que el Gateway reenvía en streaming durante la ingesta). Debe devolver
+        True si el frame cierra la sesión (fin de sesión o error del clúster).
         """
         self._socket: socket.socket = sock
+        self._on_frame = on_frame
         # Contadores de estado para el cierre lógico
         self._total_articles: int = 0
         self._total_batches: int = 0
@@ -191,11 +198,23 @@ class BatchSender:
         """
         try:
             framing.send_message(self._socket, payload)
-            response = framing.recv_message(self._socket)
-            
-            if not framing.is_ack(response):
-                raise ValueError("El Gateway respondió con un mensaje inesperado. Se requería un ACK.")
-                
+
+            # El Gateway puede intercalar resultados (Q1/Q2) antes del ACK: se procesan y se
+            # sigue esperando. Hay exactamente un ACK por mensaje enviado.
+            while True:
+                response = framing.recv_message(self._socket)
+
+                if framing.is_ack(response):
+                    return
+
+                if self._on_frame is None:
+                    raise ValueError("El Gateway respondió con un mensaje inesperado. Se requería un ACK.")
+
+                if self._on_frame(response):
+                    raise ConnectionError(
+                        "El clúster cerró la sesión antes de completar la ingesta."
+                    )
+
         except (ConnectionError, TimeoutError, OSError) as e:
             logger.critical(f"Ruptura del canal TCP durante la transmisión: {e}. Abortando sesión.")
             raise ConnectionError(f"Fallo de red en BatchSender: {e}") from e

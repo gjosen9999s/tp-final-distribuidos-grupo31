@@ -48,6 +48,8 @@ class Q5Accumulator(Controller):
             controller_count=self.controller_count,
             control_out=self.control_out,
             done_sender=self._send_done,
+            origin_node=self.origin_node,
+            next_msg_seq=self.next_msg_seq,
         )
 
         logger.info(
@@ -63,18 +65,18 @@ class Q5Accumulator(Controller):
                 msg_type, client_id, message = control.deserialize(body)
                 self.handle_control(msg_type, client_id, message, False)
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.WORDCOUNT_SUM:
                     raise ValueError(
                         f"Mensaje desconocido: {msg_type}"
                     )
-                self.handle_article(client_id, message["wordCount"])
+                self.handle_article(client_id, origin_node, msg_seq, message["wordCount"])
             ack()
         except Exception:
             logger.exception("Error procesando mensaje en q5_accumulator")
             nack()
 
-    def handle_article(self, client_id, word_count):
+    def handle_article(self, client_id, origin_node, msg_seq, word_count):
         # protegido porque se lee desde un hilo y actualiza desde otro
         with self._lock:
             if self.group.is_closed(client_id):
@@ -109,9 +111,12 @@ class Q5Accumulator(Controller):
                 # El DONE llega desde Q5_Sum y se republica al exchange
                 # de control para que lo vean todos los accumulator.
                 if not from_control:
+                    msg_seq = self.next_msg_seq(client_id)
                     self.control_out.send(
                         control.serialize_done(
                             client_id,
+                            self.origin_node,
+                            msg_seq,
                             message["controllerType"],
                             message["nodeId"],
                             message["quantity"],
@@ -157,17 +162,23 @@ class Q5Accumulator(Controller):
 
         # Cada nodo Accumulator emite su parcial (sum, count)
         # y su DONE hacia la cola Q5_Acc_Partial de los Q5_AVG_Filter.
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             internal.serialize_q5_acc_partial(
-                client_id,
+                client_id, 
+                self.origin_node, 
+                msg_seq,
                 self._partial_words_sum[client_id],
                 self._partial_article_qty[client_id],
             )
         )
 
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             control.serialize_done(
                 client_id,
+                self.origin_node,
+                msg_seq,
                 CTRL_Q5_ACCUMULATOR,
                 self.node_id,
                 1,

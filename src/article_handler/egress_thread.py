@@ -1,12 +1,16 @@
 """Consume los resultados y los devuelve al cliente."""
 import threading
 import logging
-from common.protocol.constants import CTRL_EOF, FLAG_IS_SESSION_END, InternalType, ControlType
+from common.protocol.constants import (
+    CTRL_EOF, FLAG_IS_SESSION_END, InternalType, ControlType, ResultType
+)
 from common.protocol.control import serializer as control
 from common.protocol.external import serializer as external
 from common.protocol.internal import serializer as internal
 
 logger = logging.getLogger("EgressThread")
+
+STREAMED_RESULT_TYPES = frozenset({ResultType.Q1, ResultType.Q2})
 
 
 class EgressThread(threading.Thread):
@@ -62,7 +66,7 @@ class EgressThread(threading.Thread):
                             )
                 ack()
             else:
-                msg_type, client_id, result = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, result = internal.deserialize(body)
                 if msg_type == InternalType.RESULT:
                     session = self.sessions.get_session(client_id)
                     if session:
@@ -74,7 +78,10 @@ class EgressThread(threading.Thread):
                                 result["flags"],
                                 result["payload"]
                             )
-                            session.send_result_or_buffer(ext_msg)
+                            session.send_result_or_buffer(
+                                ext_msg,
+                                immediate=result["resultType"] in STREAMED_RESULT_TYPES,
+                            )
                         except (BrokenPipeError, ConnectionResetError, OSError) as e:
                             logger.warning(f"[EgressThread] Cliente ID={client_id} desconectado al enviar resultado: {e}")
                             self.sessions.unregister_session(client_id)

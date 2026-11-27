@@ -55,16 +55,16 @@ class Q4Join(Controller):
                 msg_type, client_id, message = control.deserialize(body)
                 self._handle_done(msg_type, client_id, message)
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.Q4_PARTIAL:
                     raise ValueError(f"tipo inesperado para Q4 Join: {msg_type}")
-                self._handle_partial(client_id, message["nodeId"], message["pairs"])
+                self._handle_partial(client_id, origin_node, msg_seq, message["nodeId"], message["pairs"])
             ack()
         except Exception:
             logger.exception(f"[Q4Join] Error procesando mensaje (nodo {self.node_id})")
             nack()
 
-    def _handle_partial(self, client_id, node_id, pairs):
+    def _handle_partial(self, client_id, origin_node, msg_seq, node_id, pairs):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
@@ -129,9 +129,10 @@ class Q4Join(Controller):
 
         top = top_words(merged, TOP_SIZE)
 
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             internal.serialize_result_message(
-                client_id,
+                client_id, self.origin_node, msg_seq,
                 ResultType.Q4,
                 0,
                 0,
@@ -139,8 +140,16 @@ class Q4Join(Controller):
                 external.serialize_q4_payload(top),
             )
         )
+        msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
-            control.serialize_done(client_id, CTRL_Q4_JOIN, self.node_id, 1)
+            control.serialize_done(
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q4_JOIN,
+                self.node_id,
+                1,
+            )
         )
 
         logger.info(

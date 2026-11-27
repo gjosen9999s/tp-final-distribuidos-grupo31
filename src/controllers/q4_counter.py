@@ -83,16 +83,16 @@ class Q4Counter(Controller):
                 msg_type, client_id, message = control.deserialize(body)
                 self._handle_done(msg_type, client_id, message)
             else:
-                msg_type, client_id, message = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q4:
                     raise ValueError(f"tipo inesperado para Q4 Counter: {msg_type}")
-                self._handle_wordlist(client_id, message["wordlist"])
+                self._handle_wordlist(client_id, origin_node, msg_seq, message["wordlist"])
             ack()
         except Exception:
             logger.exception(f"[Q4Counter] Error procesando mensaje (nodo {self.node_id})")
             nack()
 
-    def _handle_wordlist(self, client_id, wordlist):
+    def _handle_wordlist(self, client_id, origin_node, msg_seq, wordlist):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
@@ -146,6 +146,7 @@ class Q4Counter(Controller):
                 state.total,
                 state.processed,
             )
+            
             self._emit_if_ready(client_id, state)
 
     def _emit_if_ready(self, client_id, state):
@@ -167,10 +168,20 @@ class Q4Counter(Controller):
 
         top = top_words(state.counts)
         queue = self.out_queues[client_id % len(self.out_queues)]
+        
+        msg_seq = self.next_msg_seq(client_id)
 
-        queue.send(internal.serialize_q4_partial_message(client_id, self.node_id, top))
+        queue.send(internal.serialize_q4_partial_message(client_id, self.origin_node, msg_seq, self.node_id, top))
+        msg_seq = self.next_msg_seq(client_id)
         queue.send(
-            control.serialize_done(client_id, CTRL_Q4_COUNTER, self.node_id, 1)
+            control.serialize_done(
+                client_id,
+                self.origin_node,
+                msg_seq,
+                CTRL_Q4_COUNTER,
+                self.node_id,
+                1,
+            )
         )
 
         logger.info(
