@@ -366,6 +366,7 @@ services:
       CONTROL_KEY: q5_counter
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "2"
+      ACCUMULATOR_COUNT: "2"
       NODE_ID: "0"
     depends_on:
       rabbitmq:
@@ -386,6 +387,7 @@ services:
       CONTROL_KEY: q5_counter
       PROGRESS_BATCH_SIZE: "100"
       CONTROLLER_COUNT: "2"
+      ACCUMULATOR_COUNT: "2"
       NODE_ID: "1"
     depends_on:
       rabbitmq:
@@ -399,12 +401,12 @@ services:
       CONTROLLER_TYPE: q5_accumulator
       MOM_HOST: rabbitmq
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
-      IN_QUEUE: Q5_Sum
+      IN_QUEUE: Q5_Sum_0
       OUT_QUEUE: Q5_Acc_Partial
       CONTROL_EXCHANGE: control
-      CONTROL_KEY: q5_accumulator
+      CONTROL_KEY: q5_accumulator_0
       PROGRESS_BATCH_SIZE: "100"
-      CONTROLLER_COUNT: "2"
+      CONTROLLER_COUNT: "1"
       COUNTER_COUNT: "2"
       NODE_ID: "0"
     depends_on:
@@ -419,12 +421,12 @@ services:
       CONTROLLER_TYPE: q5_accumulator
       MOM_HOST: rabbitmq
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
-      IN_QUEUE: Q5_Sum
+      IN_QUEUE: Q5_Sum_1
       OUT_QUEUE: Q5_Acc_Partial
       CONTROL_EXCHANGE: control
-      CONTROL_KEY: q5_accumulator
+      CONTROL_KEY: q5_accumulator_1
       PROGRESS_BATCH_SIZE: "100"
-      CONTROLLER_COUNT: "2"
+      CONTROLLER_COUNT: "1"
       COUNTER_COUNT: "2"
       NODE_ID: "1"
     depends_on:

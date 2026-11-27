@@ -37,9 +37,28 @@ NUMBER_REGEX = r"[+-]?((\d+\.?\d*)|(\.\d+))"
 
 
 class Q5Counter(Controller):
-    def __init__(self, *args, out_cand_mw=None, **kwargs):
+    def __init__(self, *args, out_cand_mw=None, sum_queues=None, **kwargs):
         super().__init__(*args, **kwargs)
         mom_host = os.getenv("MOM_HOST", "localhost")
+        self.accumulator_count = max(1, int(os.getenv("ACCUMULATOR_COUNT", "1")))
+
+        self._own_queues = []
+        if sum_queues is not None:
+            self.sum_queues = list(sum_queues)
+            if not self.sum_queues:
+                raise ValueError("Q5 Counter necesita al menos una cola en sum_queues")
+            self.accumulator_count = len(self.sum_queues)
+        elif self.accumulator_count > 1:
+            base = os.getenv("OUT_QUEUE", "Q5_Sum")
+            self._own_queues = [
+                MessageMiddlewareQueueRabbitMQ(mom_host, f"{base}_{index}")
+                for index in range(self.accumulator_count)
+            ]
+            self.sum_queues = self._own_queues
+        else:
+            if self.out_mw is None:
+                raise ValueError("Q5 Counter necesita OUT_QUEUE")
+            self.sum_queues = [self.out_mw]
 
         # Agrego una segunda cola para los articulos candidatos (mayores a 2021)
         if out_cand_mw is None:
@@ -63,9 +82,10 @@ class Q5Counter(Controller):
         )
 
         logger.info(
-            "START node=%s/%s",
+            "START node=%s/%s accumulators=%s",
             self.node_id,
             self.controller_count,
+            len(self.sum_queues),
         )
 
     def handle_article(self, client_id, article):
@@ -80,11 +100,14 @@ class Q5Counter(Controller):
             if word_count > 0 and article.dateModified and article.dateModified > 0:
                 year = article.year
                 if year is not None and year <= 2020:
+                    bucket = article.docId % len(self.sum_queues)
                     msg_seq = self.next_msg_seq(client_id)
-                    self.out_mw.send(
-                        internal.serialize_wordcount_sum(client_id, self.origin_node, msg_seq, word_count)
+                    self.sum_queues[bucket].send(
+                        internal.serialize_wordcount_sum(
+                            client_id, self.origin_node, msg_seq, word_count
+                        )
                     )
-                    self._counts[(client_id, "sum")] += 1
+                    self._counts[(client_id, "sum", bucket)] += 1
                 elif year is not None and year >= 2021:
                     msg_seq = self.next_msg_seq(client_id)
                     self.out_cand_mw.send(
@@ -98,12 +121,16 @@ class Q5Counter(Controller):
             self.group.on_processed(client_id)
 
             if self._seen[client_id] % PROGRESS_EVERY == 0:
+                sum_total = sum(
+                    self._counts[(client_id, "sum", i)]
+                    for i in range(len(self.sum_queues))
+                )
                 logger.info(
                     "PROGRESS client=%s node=%s seen=%s sum=%s cand=%s",
                     client_id,
                     self.node_id,
                     self._seen[client_id],
-                    self._counts[(client_id, "sum")],
+                    sum_total,
                     self._counts[(client_id, "cand")],
                 )
 
@@ -112,42 +139,54 @@ class Q5Counter(Controller):
             self.group.on_control(msg_type, client_id, message, from_control)
 
     def _send_done(self, client_id, _quantity):
-        sum_qty = self._counts[(client_id, "sum")]
+        sum_qtys = [
+            self._counts[(client_id, "sum", index)]
+            for index in range(len(self.sum_queues))
+        ]
         cand_qty = self._counts[(client_id, "cand")]
 
         logger.info(
             "DONE client=%s node=%s sum=%s cand=%s",
             client_id,
             self.node_id,
-            sum_qty,
+            sum_qtys,
             cand_qty,
         )
 
-        msg_seq = self.next_msg_seq(client_id)
-
-        # Un DONE para Q5_Sum
-        self.out_mw.send(
-            control.serialize_done(
-                client_id,
-                self.origin_node,
-                msg_seq,
-                CTRL_Q5_COUNTER,
-                self.node_id,
-                sum_qty,
+        # Un DONE por particion Q5_Sum_i con la cantidad enviada a esa particion.
+        for index, queue in enumerate(self.sum_queues):
+            msg_seq = self.next_msg_seq(client_id)
+            queue.send(
+                control.serialize_done(
+                    client_id,
+                    self.origin_node,
+                    msg_seq,
+                    CTRL_Q5_COUNTER,
+                    self.node_id,
+                    sum_qtys[index],
+                )
             )
-        )
 
         # Un DONE para Q5_Cand
+        cand_seq = self.next_msg_seq(client_id)
         self.out_cand_mw.send(
             control.serialize_done(
                 client_id,
                 self.origin_node,
-                msg_seq,
+                cand_seq,
                 CTRL_Q5_COUNTER,
                 self.node_id,
                 cand_qty,
             )
         )
+
+        self._cleanup_client(client_id)
+
+    def _cleanup_client(self, client_id):
+        self._seen.pop(client_id, None)
+        self._counts.pop((client_id, "cand"), None)
+        for index in range(len(self.sum_queues)):
+            self._counts.pop((client_id, "sum", index), None)
 
     @staticmethod
     def _count_words(abstract):
@@ -165,7 +204,8 @@ class Q5Counter(Controller):
 
     def stop(self):
         super().stop()
-        try:
-            self.out_cand_mw.close()
-        except Exception:
-            pass
+        for queue in [self.out_cand_mw, *self._own_queues]:
+            try:
+                queue.close()
+            except Exception:
+                pass
