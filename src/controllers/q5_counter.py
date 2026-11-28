@@ -104,7 +104,11 @@ class Q5Counter(Controller):
                     msg_seq = self.next_msg_seq(client_id)
                     self.sum_queues[bucket].send(
                         internal.serialize_wordcount_sum(
-                            client_id, self.origin_node, msg_seq, word_count
+                            client_id,
+                            self.origin_node,
+                            msg_seq,
+                            article.articleId,
+                            word_count,
                         )
                     )
                     self._counts[(client_id, "sum", bucket)] += 1
@@ -112,7 +116,13 @@ class Q5Counter(Controller):
                     msg_seq = self.next_msg_seq(client_id)
                     self.out_cand_mw.send(
                         internal.serialize_wordcount_cand(
-                            client_id, self.origin_node, msg_seq, word_count, article.docId, article.url
+                            client_id,
+                            self.origin_node,
+                            msg_seq,
+                            article.articleId,
+                            word_count,
+                            article.docId,
+                            article.url,
                         )
                     )
                     self._counts[(client_id, "cand")] += 1

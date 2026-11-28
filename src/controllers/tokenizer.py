@@ -97,7 +97,8 @@ class Tokenizer(Controller):
                 self._counts[(client_id, "q3", i)] += len(wordlist[i])
                 self.q3_queues[i].send(
                     internal.serialize_wordlist_q3_message(
-                        client_id, self.origin_node, msg_seq, wordlist[i], article.inLanguage
+                        client_id, self.origin_node, msg_seq,
+                        article.articleId, wordlist[i], article.inLanguage
                     )
                 )
 
@@ -105,7 +106,8 @@ class Tokenizer(Controller):
                     self._counts[(client_id, "q4", i)] += len(wordlist[i])
                     self.q4_queues[i].send(
                         internal.serialize_wordlist_q4_message(
-                            client_id, self.origin_node, msg_seq, article.docId, wordlist[i]
+                            client_id, self.origin_node, msg_seq,
+                            article.articleId, article.docId, wordlist[i]
                             ) # Mismo msg_seq para Q3 y Q4
                         )
                     

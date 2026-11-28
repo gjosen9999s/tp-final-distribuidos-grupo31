@@ -28,6 +28,7 @@ class _ClientState:
     total: int = 0
     dones: set = field(default_factory=set)
     seen_msgs: set = field(default_factory=set)
+    seen_articles: set = field(default_factory=set)
     warned: bool = False
 
 
@@ -74,6 +75,7 @@ class Q5Accumulator(Controller):
                     {
                         "originNode": origin_node,
                         "msgSeq": msg_seq,
+                        "articleId": message["articleId"],
                         "wordCount": message["wordCount"],
                     },
                 )
@@ -84,7 +86,11 @@ class Q5Accumulator(Controller):
 
     def handle_article(self, client_id, article):
         self._handle_sum(
-            client_id, article["originNode"], article["msgSeq"], article["wordCount"]
+            client_id,
+            article["originNode"],
+            article["msgSeq"],
+            article["articleId"],
+            article["wordCount"],
         )
 
     def handle_control(self, msg_type, client_id, message, from_control):
@@ -96,7 +102,7 @@ class Q5Accumulator(Controller):
             return
         self._handle_done(client_id, message["nodeId"], message["quantity"])
 
-    def _handle_sum(self, client_id, origin_node, msg_seq, word_count):
+    def _handle_sum(self, client_id, origin_node, msg_seq, article_id, word_count):
         with self._lock:
             if client_id in self._closed_clients:
                 return
@@ -107,8 +113,11 @@ class Q5Accumulator(Controller):
                 return
 
             state.seen_msgs.add(msg_key)
-            state.partial_words_sum += word_count
-            state.partial_article_qty += 1
+            if article_id not in state.seen_articles:
+                state.seen_articles.add(article_id)
+                state.partial_words_sum += word_count
+                state.partial_article_qty += 1
+
             state.processed += 1
 
             if state.processed % PROGRESS_EVERY == 0:

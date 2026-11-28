@@ -130,24 +130,34 @@ def serialize_result_message(
     )
 
 
-def serialize_wordcount_sum(client_id: int, origin_node, msg_seq, word_count: int) -> bytes:
+def serialize_wordcount_sum(
+    client_id: int, origin_node, msg_seq, article_id: int, word_count: int
+) -> bytes:
     """WORDCOUNT_SUM: conteo de palabras únicas de un artículo ≤2020."""
     return (
         serialize_uint8(INT_WORDCOUNT_SUM)
         + serialize_uint32(client_id)
         + serialize_internal_header(origin_node, msg_seq)
+        + serialize_uint32(article_id)
         + serialize_uint32(word_count)
     )
 
 
 def serialize_wordcount_cand(
-    client_id: int, origin_node, msg_seq, word_count: int, doc_id: int, url: str
+    client_id: int,
+    origin_node,
+    msg_seq,
+    article_id: int,
+    word_count: int,
+    doc_id: int,
+    url: str,
 ) -> bytes:
     """WORDCOUNT_CAND: conteo + identificador de un artículo candidato ≥2021."""
     return (
         serialize_uint8(INT_WORDCOUNT_CAND)
         + serialize_uint32(client_id)
         + serialize_internal_header(origin_node, msg_seq)
+        + serialize_uint32(article_id)
         + serialize_uint32(word_count)
         + serialize_uint32(doc_id)
         + serialize_string(url)
@@ -208,25 +218,44 @@ def deserialize(payload):
                 "payload": reader.bytes(),
             },
         )
-    # [1B tipo=2][4B clientId][2B originNode][4B MsgSeq][4B len wordlist][word|word|...|word][1B inLanguage]
+
+    # [1B tipo=2][4B clientId][2B originNode][4B msgSeq]
+    # [4B articleId][4B len wordlist][word|word|...][1B inLanguage]
     if msg_type == InternalType.WORD_Q3:
-        
+
         origin_node, msg_seq = read_internal_header(reader)
+        article_id = reader.uint32()
 
-        return InternalType.WORD_Q3, client_id, origin_node, msg_seq, {
-            "wordlist": deserialize_stringlist(reader.bytes()),
-            "inLanguage": reader.uint8(),
-        }
+        return (
+            InternalType.WORD_Q3,
+            client_id,
+            origin_node,
+            msg_seq,
+            {
+                "articleId": article_id,
+                "wordlist": deserialize_stringlist(reader.bytes()),
+                "inLanguage": reader.uint8(),
+            },
+        )
 
-    # [1B type=3][4B clientId][2B originNode][4B MsgSeq][4B docId][4B len wordlist][word|word|...|word]
+    # [1B tipo=3][4B clientId][2B originNode][4B msgSeq]
+    # [4B articleId][4B docId][4B len wordlist][word|word|...]
     if msg_type == InternalType.WORD_Q4:
 
         origin_node, msg_seq = read_internal_header(reader)
-        
-        return InternalType.WORD_Q4, client_id, origin_node, msg_seq, {
-        "docId": reader.uint32(),
-        "wordlist": deserialize_stringlist(reader.bytes()),
-    }
+        article_id = reader.uint32()
+
+        return (
+            InternalType.WORD_Q4,
+            client_id,
+            origin_node,
+            msg_seq,
+            {
+                "articleId": article_id,
+                "docId": reader.uint32(),
+                "wordlist": deserialize_stringlist(reader.bytes()),
+            },
+        )
 
     # [1B tipo=7][4B clientId][2B originNode][4B MsgSeq][4B len words][ [4B len word][word] ... ]
     if msg_type == InternalType.Q3_PARTIAL:
@@ -255,16 +284,28 @@ def deserialize(payload):
 
     if msg_type == InternalType.WORDCOUNT_SUM:
         origin_node, msg_seq = read_internal_header(reader)
-        return ( InternalType.WORDCOUNT_SUM, client_id, origin_node, msg_seq, {"wordCount": reader.uint32()} )
-
-    if msg_type == InternalType.WORDCOUNT_CAND:
-        origin_node, msg_seq = read_internal_header(reader)
+        article_id = reader.uint32()
         return (
-            InternalType.WORDCOUNT_CAND,
-            client_id, 
+            InternalType.WORDCOUNT_SUM,
+            client_id,
             origin_node,
             msg_seq,
             {
+                "articleId": article_id,
+                "wordCount": reader.uint32(),
+            },
+        )
+
+    if msg_type == InternalType.WORDCOUNT_CAND:
+        origin_node, msg_seq = read_internal_header(reader)
+        article_id = reader.uint32()
+        return (
+            InternalType.WORDCOUNT_CAND,
+            client_id,
+            origin_node,
+            msg_seq,
+            {
+                "articleId": article_id,
                 "wordCount": reader.uint32(),
                 "docId": reader.uint32(),
                 "url": reader.string(),
@@ -285,36 +326,22 @@ def deserialize(payload):
         )
     raise ValueError(f"tipo interno desconocido: {msg_type}")
 
-def serialize_word_q3_message(client_id, word, in_language):
-    return (
-        serialize_uint8(INT_WORD_Q3)
-        + serialize_uint32(client_id)
-        + serialize_string(word)
-        + serialize_uint8(in_language)
-    )
-
-def serialize_wordlist_q3_message(client_id, origin_node, msg_seq, wordlist, in_language):
+def serialize_wordlist_q3_message(client_id, origin_node, msg_seq, article_id, wordlist, in_language):
     return (
         serialize_uint8(INT_WORD_Q3)
         + serialize_uint32(client_id)
         + serialize_internal_header(origin_node, msg_seq)
+        + serialize_uint32(article_id)
         + serialize_stringlist(wordlist)
         + serialize_uint8(in_language)
     )
 
-def serialize_word_q4_message(client_id, doc_id, word):
-    return (
-        serialize_uint8(INT_WORD_Q4)
-        + serialize_uint32(client_id)
-        + serialize_uint32(doc_id)
-        + serialize_string(word)
-    )
-
-def serialize_wordlist_q4_message(client_id, origin_node, msg_seq, doc_id, wordlist):
+def serialize_wordlist_q4_message(client_id, origin_node, msg_seq, article_id, doc_id, wordlist):
     return (
         serialize_uint8(INT_WORD_Q4)
         + serialize_uint32(client_id)
         + serialize_internal_header(origin_node, msg_seq)
+        + serialize_uint32(article_id)
         + serialize_uint32(doc_id)
         + serialize_stringlist(wordlist)
     )

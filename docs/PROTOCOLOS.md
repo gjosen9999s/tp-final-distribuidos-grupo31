@@ -128,6 +128,8 @@ Hoy el header está aplicado a todos los mensajes internos de datos: `ARTICLE`, 
 
 El serializer no deduplica. Solo transporta los IDs. El consumidor es el que consulta su estado y decide si el mensaje ya fue procesado.
 
+Q5 usa `articleId` en `WORDCOUNT_SUM`, `WORDCOUNT_CAND` y `RESULT`. El Accumulator y el Average+Filter descartan articulos repetidos, y el ArticleHandler tambien deduplica los resultados Q5.
+
 Si `type >= 101`, el mensaje es de control (sección 3).
 
 ### Primitivas
@@ -226,12 +228,14 @@ imageUrl:  string
 ### `WORDCOUNT_SUM` (5)
 
 ```
+articleId: u32
 wordCount: u32
 ```
 
 ### `WORDCOUNT_CAND` (6)
 
 ```
+articleId: u32
 wordCount: u32
 docId:     u32
 url:       string
