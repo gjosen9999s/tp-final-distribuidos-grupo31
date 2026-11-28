@@ -153,17 +153,20 @@ def deserialize_article(reader):
     )
 
 
-def serialize_batch(articles):
+def serialize_batch(batch_seq, articles):
     return (
         serialize_uint8(EXT_BATCH)
+        + serialize_uint32(batch_seq)
         + serialize_uint32(len(articles))
         + b"".join(serialize_article(article) for article in articles)
     )
 
 
 def deserialize_batch(reader):
+    batch_seq = reader.uint32()
     count = reader.uint32()
-    return [deserialize_article(reader) for _ in range(count)]
+    articles = [deserialize_article(reader) for _ in range(count)]
+    return batch_seq, articles
 
 
 def serialize_eof(total_articles, total_batches):
@@ -215,16 +218,26 @@ def deserialize_error(reader):
 
 
 def deserialize_message(payload):
+    
     reader = Reader(payload)
     msg_type = reader.uint8()
+    
     if msg_type == ExternalType.BATCH:
-        return ExternalType.BATCH, deserialize_batch(reader)
+        batch_seq, articles = deserialize_batch(reader)
+        return ExternalType.BATCH, {
+            "batch_seq": batch_seq,
+            "articles": articles,
+        }
+    
     if msg_type == ExternalType.EOF:
         return ExternalType.EOF, deserialize_eof(reader)
+    
     if msg_type == ExternalType.RESULT:
         return ExternalType.RESULT, deserialize_result(reader)
+    
     if msg_type == ExternalType.ERROR:
         return ExternalType.ERROR, deserialize_error(reader)
+    
     raise ValueError(f"tipo externo desconocido: {msg_type}")
 
 

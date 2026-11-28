@@ -267,7 +267,10 @@ class Q5AverageNFilter(Controller):
             
             self.out_mw.send(
                 internal.serialize_result_message(
-                    client_id, self.origin_node, msg_seq,
+                    client_id,
+                    self.origin_node,
+                    msg_seq,
+                    0,
                     ResultType.Q5,
                     doc_id,
                     0,

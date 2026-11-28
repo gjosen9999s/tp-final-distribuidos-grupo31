@@ -153,15 +153,18 @@ class IngestThread(threading.Thread):
                 msg_type, data = external.deserialize_message(payload)
 
                 if msg_type == ExternalType.BATCH:
-                    
-                    for article in data:
+                    batch_seq = data["batch_seq"]
+
+                    for row_index, article in enumerate(data["articles"]):
                         
                         article_seq += 1
-
+                        article_id = batch_seq * 1_000_000 + row_index
+                        
                         internal_msg = internal.serialize_article_message(
                             client_id,
                             self.origin_node,
                             article_seq,
+                            article_id,
                             article,
                             FULL_ARTICLE_MASK,
                         )

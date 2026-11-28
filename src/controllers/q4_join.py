@@ -58,6 +58,11 @@ class Q4Join(Controller):
                 msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.Q4_PARTIAL:
                     raise ValueError(f"tipo inesperado para Q4 Join: {msg_type}")
+
+                if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                    ack()
+                    return
+
                 self._handle_partial(client_id, origin_node, msg_seq, message["nodeId"], message["pairs"])
             ack()
         except Exception:
@@ -132,7 +137,10 @@ class Q4Join(Controller):
         msg_seq = self.next_msg_seq(client_id)
         self.out_mw.send(
             internal.serialize_result_message(
-                client_id, self.origin_node, msg_seq,
+                client_id,
+                self.origin_node,
+                msg_seq,
+                0,
                 ResultType.Q4,
                 0,
                 0,

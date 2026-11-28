@@ -68,6 +68,11 @@ class Q3Reduce(Controller):
                 msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q3:
                     raise ValueError(f"tipo inesperado para Q3 Reduce: {msg_type}")
+
+                if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                    ack()
+                    return
+
                 self._handle_wordlist(
                     client_id, origin_node, msg_seq, message["wordlist"], message["inLanguage"]
                 )

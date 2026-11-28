@@ -34,6 +34,8 @@ class Q1Controller(Controller):
             origin_node=self.origin_node,
             next_msg_seq=self.next_msg_seq,
         )
+        # Control de duplicados logicos
+        self.emitted_article_ids = {}
 
         logger.info(
             "START node=%s/%s",
@@ -69,8 +71,15 @@ class Q1Controller(Controller):
             self._seen[client_id] += 1
 
             if self._matches(article):
+
+                emitted = self.emitted_article_ids.setdefault(client_id, set())
+                if article.articleId in emitted:
+                    self.group.on_processed(client_id)
+                    return
+                emitted.add(article.articleId)
+                
                 self._matched[client_id] += 1
-                # Q1: cada art��culo que matchea es un resultado completo.
+                # Q1: cada articulo que matchea es un resultado completo.
                 logger.debug(
                     "MATCH client=%s node=%s doc=%s",
                     client_id,
@@ -84,9 +93,10 @@ class Q1Controller(Controller):
                 msg_seq = self.next_msg_seq(client_id)
                 self.out_mw.send(
                     internal.serialize_result_message(
-                        client_id, 
-                        self.origin_node, 
+                        client_id,
+                        self.origin_node,
                         msg_seq,
+                        article.articleId,
                         ResultType.Q1,
                         article.docId,
                         0,
