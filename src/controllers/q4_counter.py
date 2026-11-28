@@ -32,6 +32,7 @@ class _ClientState:
     total: int = 0
     dones: set = field(default_factory=set)
     closed: bool = False
+    seen_articles: set = field(default_factory=set)
     warned: bool = False
 
 
@@ -91,24 +92,28 @@ class Q4Counter(Controller):
                     ack()
                     return
 
-                self._handle_wordlist(client_id, origin_node, msg_seq, message["wordlist"])
+                self._handle_wordlist(client_id, origin_node, msg_seq,
+                                      message["articleId"], message["wordlist"])
             ack()
         except Exception:
             logger.exception(f"[Q4Counter] Error procesando mensaje (nodo {self.node_id})")
             nack()
 
-    def _handle_wordlist(self, client_id, origin_node, msg_seq, wordlist):
+    def _handle_wordlist(self, client_id, origin_node, msg_seq, article_id, wordlist):
         with self._lock:
             state = self._state(client_id)
             if state.closed:
                 return
 
-            # Sumo todas las palabaras de la lista
-            for word in wordlist:
-                state.counts[word] += 1
+            if article_id not in state.seen_articles:
+                state.seen_articles.add(article_id)
+
+                # Sumo todas las palabaras de la lista
+                for word in wordlist:
+                    state.counts[word] += 1
 
             state.processed += len(wordlist)
-            
+
             if state.processed % PROGRESS_EVERY == 0:
                 logger.info(
                     "[Q4Counter] PROGRESS client=%s node=%s processed=%s total=%s "
@@ -121,6 +126,7 @@ class Q4Counter(Controller):
                     self.tokenizers,
                     len(state.counts),
                 )
+
             self._emit_if_ready(client_id, state)
 
     def _handle_done(self, msg_type, client_id, message):
@@ -197,6 +203,7 @@ class Q4Counter(Controller):
         )
 
         state.counts = Counter()
+        state.seen_articles.clear()
         state.closed = True
 
     def handle_article(self, client_id, article):

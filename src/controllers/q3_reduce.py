@@ -29,6 +29,7 @@ class _ClientState:
     processed: int = 0
     total: int = 0
     dones: set = field(default_factory=set)
+    seen_articles: set = field(default_factory=set)
     closed: bool = False
 
 
@@ -74,25 +75,30 @@ class Q3Reduce(Controller):
                     return
 
                 self._handle_wordlist(
-                    client_id, origin_node, msg_seq, message["wordlist"], message["inLanguage"]
+                    client_id, origin_node, msg_seq,
+                    message["articleId"], message["wordlist"], message["inLanguage"]
                 )
             ack()
         except Exception:
             nack()
 
-    def _handle_wordlist(self, client_id, origin_node, msg_seq, wordlist, in_language):
+    def _handle_wordlist(self, client_id, origin_node, msg_seq, article_id, wordlist, in_language):
+
         with self._lock:
             state = self._state(client_id)
             if state.closed:
                 return
 
+            if article_id not in state.seen_articles:
+                state.seen_articles.add(article_id)
+
+                if in_language == LANG_EN:
+                    state.en_words.update(wordlist)
+                elif in_language == LANG_FR:
+                    state.fr_words.update(wordlist)
+
             # Se cuentan todas las palabras recibidas indpte del idioma porque se reciben sin filtrar
             state.processed += len(wordlist)
-
-            if in_language == LANG_EN:
-                state.en_words.update(wordlist)
-            elif in_language == LANG_FR:
-                state.fr_words.update(wordlist)
 
             if state.processed % PROGRESS_EVERY == 0:
                 logger.info(
@@ -183,6 +189,9 @@ class Q3Reduce(Controller):
                 1,
             )
         )
+        state.en_words.clear()
+        state.fr_words.clear()
+        state.seen_articles.clear()
         state.closed = True
 
     # No se usan. Pero se definen dado que se heredan.

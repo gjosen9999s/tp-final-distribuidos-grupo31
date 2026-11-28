@@ -71,7 +71,6 @@ class EgressThread(threading.Thread):
                     session = self.sessions.get_session(client_id)
                     if session:
                         try:
-                            check_duplicate = result["resultType"] != ResultType.Q5
                             result_key = (
                                 client_id,
                                 result["resultType"],
@@ -80,7 +79,7 @@ class EgressThread(threading.Thread):
                                 result["partId"],
                             )
 
-                            if check_duplicate and result_key in session.seen_results:
+                            if result_key in session.seen_results:
                                 ack()
                                 return
 
@@ -95,8 +94,7 @@ class EgressThread(threading.Thread):
                                 ext_msg,
                                 immediate=result["resultType"] in STREAMED_RESULT_TYPES,
                             )
-                            if check_duplicate:
-                                session.seen_results.add(result_key)
+                            session.seen_results.add(result_key)
                         except (BrokenPipeError, ConnectionResetError, OSError) as e:
                             logger.warning(f"[EgressThread] Cliente ID={client_id} desconectado al enviar resultado: {e}")
                             self.sessions.unregister_session(client_id)

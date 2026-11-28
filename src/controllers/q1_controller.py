@@ -61,6 +61,9 @@ class Q1Controller(Controller):
                 quantity,
             )
         )
+        self.emitted_article_ids.pop(client_id, None)
+        self._seen.pop(client_id, None)
+        self._matched.pop(client_id, None)
 
     def handle_article(self, client_id, article):
         # El lock es porque esto lo llaman dos hilos (de datos y de control).

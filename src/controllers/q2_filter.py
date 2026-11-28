@@ -59,6 +59,7 @@ class Q2Filter(Controller):
                 quantity,
             )
         )
+        self.emitted_article_ids.pop(client_id, None)
 
     def handle_article(self, client_id, article):
         try:

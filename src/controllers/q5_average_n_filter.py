@@ -32,6 +32,7 @@ class _ClientState:
     total_article_qty: int = 0
     received_counter_dones: set = field(default_factory=set)
     received_accumulator_dones: set = field(default_factory=set)
+    seen_articles: set = field(default_factory=set)
     closed: bool = False
 
 
@@ -56,6 +57,7 @@ class Q5AverageNFilter(Controller):
         self.q5_accumulators_qty = max(1, int(os.getenv("ACCUMULATOR_COUNT", "1")))
 
         self._states = {}
+        self._closed_clients = set()
         self._acc_thread = None
 
         logger.info(
@@ -115,10 +117,15 @@ class Q5AverageNFilter(Controller):
             else:
                 msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type == InternalType.WORDCOUNT_CAND:
+                    if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                        ack()
+                        return
+
                     self._handle_candidate(
                         client_id,
                         origin_node,
                         msg_seq,
+                        message["articleId"],
                         message["url"],
                         message["wordCount"],
                         message["docId"],
@@ -142,9 +149,13 @@ class Q5AverageNFilter(Controller):
             else:
                 msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type == InternalType.Q5_ACC_PARTIAL:
+                    if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                        ack()
+                        return
+
                     self._handle_acc_partial(
-                        client_id, 
-                        origin_node, 
+                        client_id,
+                        origin_node,
                         msg_seq,
                         message["totalSum"],
                         message["count"],
@@ -158,13 +169,19 @@ class Q5AverageNFilter(Controller):
             logger.exception("Error procesando mensaje en q5_average_n_filter (cola acumuladores)")
             nack()
 
-    def _handle_candidate(self, client_id, origin_node, msg_seq, url, word_count, doc_id):
+    def _handle_candidate(
+        self, client_id, origin_node, msg_seq, article_id, url, word_count, doc_id
+    ):
         with self._lock:
-            state = self._state(client_id)
-            if state.closed:
+            if client_id in self._closed_clients:
                 return
 
-            state.candidates.append((url, word_count, doc_id))
+            state = self._state(client_id)
+            if state.closed or article_id in state.seen_articles:
+                return
+
+            state.seen_articles.add(article_id)
+            state.candidates.append((article_id, url, word_count, doc_id))
             if len(state.candidates) % PROGRESS_EVERY == 0:
                 logger.info(
                     "PROGRESS client=%s node=%s candidates=%s",
@@ -176,6 +193,9 @@ class Q5AverageNFilter(Controller):
 
     def _handle_acc_partial(self, client_id, origin_node, msg_seq, total_sum, count):
         with self._lock:
+            if client_id in self._closed_clients:
+                return
+
             state = self._state(client_id)
             if state.closed:
                 return
@@ -195,6 +215,9 @@ class Q5AverageNFilter(Controller):
 
     def _handle_counter_done(self, client_id, node_id):
         with self._lock:
+            if client_id in self._closed_clients:
+                return
+
             state = self._state(client_id)
             if state.closed:
                 return
@@ -212,6 +235,9 @@ class Q5AverageNFilter(Controller):
 
     def _handle_accumulator_done(self, client_id, node_id):
         with self._lock:
+            if client_id in self._closed_clients:
+                return
+
             state = self._state(client_id)
             if state.closed:
                 return
@@ -246,8 +272,8 @@ class Q5AverageNFilter(Controller):
         )
 
         matching = [
-            (url, wc, doc_id)
-            for (url, wc, doc_id) in state.candidates
+            (article_id, url, wc, doc_id)
+            for (article_id, url, wc, doc_id) in state.candidates
             if wc > average
         ]
 
@@ -260,17 +286,17 @@ class Q5AverageNFilter(Controller):
             len(matching),
         )
 
-        for url, wc, doc_id in matching:
-            
+        for article_id, url, wc, doc_id in matching:
+
             payload = external.serialize_q5_payload(url, wc)
             msg_seq = self.next_msg_seq(client_id)
-            
+
             self.out_mw.send(
                 internal.serialize_result_message(
                     client_id,
                     self.origin_node,
                     msg_seq,
-                    0,
+                    article_id,
                     ResultType.Q5,
                     doc_id,
                     0,
@@ -296,6 +322,11 @@ class Q5AverageNFilter(Controller):
             self.node_id,
             len(matching),
         )
+        self._cleanup_client(client_id)
+
+    def _cleanup_client(self, client_id):
+        self._closed_clients.add(client_id)
+        self._states.pop(client_id, None)
 
     def handle_article(self, client_id, article):
         raise RuntimeError("Q5AverageNFilter no recibe mensajes ARTICLE")
