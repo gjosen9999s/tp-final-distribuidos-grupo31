@@ -86,6 +86,11 @@ class Q4Counter(Controller):
                 msg_type, client_id, origin_node, msg_seq, message = internal.deserialize(body)
                 if msg_type != InternalType.WORD_Q4:
                     raise ValueError(f"tipo inesperado para Q4 Counter: {msg_type}")
+
+                if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                    ack()
+                    return
+
                 self._handle_wordlist(client_id, origin_node, msg_seq, message["wordlist"])
             ack()
         except Exception:

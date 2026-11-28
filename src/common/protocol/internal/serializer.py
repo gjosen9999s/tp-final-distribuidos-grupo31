@@ -96,20 +96,32 @@ def deserialize_article(reader):
     return Article(**values)
 
 
-def serialize_article_message(client_id, origin_node, msg_seq, article, mask):
+def serialize_article_message(client_id, origin_node, msg_seq, article_id, article, mask):
     return (
         serialize_uint8(INT_ARTICLE)
         + serialize_uint32(client_id)
         + serialize_internal_header(origin_node, msg_seq)
+        + serialize_uint32(article_id)
         + serialize_article(article, mask)
     )
 
 
-def serialize_result_message(client_id, origin_node, msg_seq, result_type, doc_id, part_id, flags, payload):
+def serialize_result_message(
+    client_id,
+    origin_node,
+    msg_seq,
+    article_id,
+    result_type,
+    doc_id,
+    part_id,
+    flags,
+    payload,
+):
     return (
         serialize_uint8(INT_RESULT)
         + serialize_uint32(client_id)
         + serialize_internal_header(origin_node, msg_seq)
+        + serialize_uint32(article_id)
         + serialize_uint8(result_type)
         + serialize_uint32(doc_id)
         + serialize_uint32(part_id)
@@ -164,22 +176,30 @@ def deserialize(payload):
     # [1B tipo=1][4B clientId][ [2B origin node][4B msg seq] ][1B mask][campos según mask]
     if msg_type == InternalType.ARTICLE:
         origin_node, msg_seq = read_internal_header(reader)
+        article_id = reader.uint32()
+        article = deserialize_article(reader)
+        article.articleId = article_id
+
         return (
             InternalType.ARTICLE,
             client_id,
             origin_node,
             msg_seq,
-            deserialize_article(reader),
+            article,
         )
 
-    # [1B tipo=10][4B clientId][1B resultType][4B docId][4B partId][1B flags][4B len payload][payload]
+    # [1B tipo=10][4B clientId][2B originNode][4B msgSeq][4B articleId]
+    # [1B resultType][4B docId][4B partId][1B flags][4B len payload][payload]
     if msg_type == InternalType.RESULT:
         origin_node, msg_seq = read_internal_header(reader)
+        article_id = reader.uint32()
+
         return (
             InternalType.RESULT,
             client_id,
             origin_node,
             msg_seq,
+            article_id,
             {
                 "resultType": reader.uint8(),
                 "docId": reader.uint32(),

@@ -66,11 +66,24 @@ class EgressThread(threading.Thread):
                             )
                 ack()
             else:
-                msg_type, client_id, origin_node, msg_seq, result = internal.deserialize(body)
+                msg_type, client_id, origin_node, msg_seq, article_id, result = internal.deserialize(body)
                 if msg_type == InternalType.RESULT:
                     session = self.sessions.get_session(client_id)
                     if session:
                         try:
+                            check_duplicate = result["resultType"] != ResultType.Q5
+                            result_key = (
+                                client_id,
+                                result["resultType"],
+                                article_id,
+                                result["docId"],
+                                result["partId"],
+                            )
+
+                            if check_duplicate and result_key in session.seen_results:
+                                ack()
+                                return
+
                             ext_msg = external.serialize_result(
                                 result["resultType"],
                                 result["docId"],
@@ -82,6 +95,8 @@ class EgressThread(threading.Thread):
                                 ext_msg,
                                 immediate=result["resultType"] in STREAMED_RESULT_TYPES,
                             )
+                            if check_duplicate:
+                                session.seen_results.add(result_key)
                         except (BrokenPipeError, ConnectionResetError, OSError) as e:
                             logger.warning(f"[EgressThread] Cliente ID={client_id} desconectado al enviar resultado: {e}")
                             self.sessions.unregister_session(client_id)

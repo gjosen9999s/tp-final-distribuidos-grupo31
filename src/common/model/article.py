@@ -14,7 +14,8 @@ class Article:
     sectionsFlags: int | None = None
     abstract: str | None = None
     imageUrl: str | None = None
-
+    articleId: int | None = None
+    
     @property
     def year(self):
         if self.dateModified is None:

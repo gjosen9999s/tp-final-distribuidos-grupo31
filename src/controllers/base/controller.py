@@ -1,10 +1,12 @@
 """Controller base: consumidores, dispatch y ciclo de vida."""
+import os
 import threading
 from abc import ABC, abstractmethod
 from collections import Counter
 
 from common.protocol.constants import CTRL_EOF, InternalType
 from common.protocol.control import serializer as control
+from common.deduplicate import DeduplicateWindow
 from common.protocol.internal import serializer as internal
 
 ORIGIN_BASE = {
@@ -52,6 +54,8 @@ class Controller(ABC):
         self._msg_seq = Counter()
         self._msg_seq_lock = threading.Lock()
 
+        self.deduplicate = DeduplicateWindow(window_size=int(os.getenv("DEDUPLICATE_WINDOW_SIZE", "1000")))
+
     def run(self):
         self._control_thread = threading.Thread(target=self._consume_control)
         self._control_thread.start()
@@ -97,7 +101,14 @@ class Controller(ABC):
                 msg_type, client_id, origin_node, msg_seq, article = internal.deserialize(body)
                 if msg_type != InternalType.ARTICLE:
                     raise ValueError(f"tipo interno inesperado: {msg_type}")
+
+                # Control de duplicados (origen/sequencia), los mensajes duplicados se ignoran
+                if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                    ack()
+                    return
+                
                 self.handle_article(client_id, article)
+
             ack()
         except Exception:
             nack()

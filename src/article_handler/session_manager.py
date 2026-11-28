@@ -31,6 +31,7 @@ class ClientSession:
         self._lock = threading.Lock()
         self._eof_reached = False
         self._buffer: List[bytes] = []
+        self.seen_results = set()
 
     def send_ack(self) -> None:
         """Envía un ACK al cliente de forma thread-safe."""

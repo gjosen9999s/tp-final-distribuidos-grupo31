@@ -3,6 +3,7 @@
 import threading
 from dataclasses import dataclass
 
+from common.deduplicate import DeduplicateWindow
 from common.protocol.constants import ControlType
 from common.protocol.control import serializer as control
 
@@ -44,6 +45,7 @@ class GroupCoordinator:
         self._lock = threading.Lock()
         self.origin_node = origin_node
         self.next_msg_seq = next_msg_seq
+        self.deduplicate = DeduplicateWindow()
 
     def _state(self, client_id):
         state = self._states.get(client_id)
@@ -81,6 +83,13 @@ class GroupCoordinator:
             state = self._state(client_id)
             if state.closed:
                 return
+
+            origin_node = message.get("originNode")
+            msg_seq = message.get("msgSeq")
+
+            if origin_node is not None and msg_seq is not None:
+                if self.deduplicate.is_duplicate(client_id, origin_node, msg_seq):
+                    return
 
             if msg_type == ControlType.EOF:
                 self._on_eof(client_id, state, message["total"], from_control)
@@ -135,6 +144,7 @@ class GroupCoordinator:
         if state.sum == state.total:
             self.done_sender(client_id, state.emitted)
             state.closed = True
+            self.deduplicate.clear_client(client_id)
 
     def _send_progress(self, client_id, quantity):
         msg_seq = self.next_msg_seq(client_id)

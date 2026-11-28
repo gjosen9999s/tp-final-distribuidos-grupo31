@@ -310,6 +310,8 @@ La clave para descartar un control repetido es:
 (originNode, clientId, msgSeq)
 ```
 
+El `GroupCoordinator` usa esa clave antes de procesar `PROGRESS`, `DONE`, `EOF` o `FLUSH`. No guarda todos los mensajes: mantiene el último `msgSeq` visto y una ventana chica por emisor. Si un control llega dos veces, no se suma ni se cierra dos veces.
+
 ### Tipos
 
 | Code | Tipo | Quién lo emite → quién lo consume |

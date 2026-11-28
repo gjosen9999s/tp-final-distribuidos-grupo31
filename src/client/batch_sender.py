@@ -117,6 +117,8 @@ class BatchSender:
         self._total_articles: int = 0
         self._total_batches: int = 0
 
+        self._batch_seq: int = 0
+
     def _map_to_articles(self, batch: Any) -> List[_LightweightArticle]:
         """
         Extrae columnas del bloque de PyArrow adaptando el esquema real del dataset 
@@ -228,7 +230,8 @@ class BatchSender:
             articles = self._map_to_articles(batch)
             self._total_articles += len(articles)
             self._total_batches += 1
-            batch_payload = serializer.serialize_batch(articles)
+            self._batch_seq += 1
+            batch_payload = serializer.serialize_batch(self._batch_seq, articles)
             self._transmit(batch_payload)
             
         if is_last:

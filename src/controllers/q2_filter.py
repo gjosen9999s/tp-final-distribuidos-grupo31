@@ -27,6 +27,7 @@ class Q2Filter(Controller):
         super().__init__(*args, **kwargs)
         self.image_client = image_client or WikimediaClient()
         self.chunk_size = max(1, chunk_size or env.result_chunk_size())
+        self.emitted_article_ids = {}
         self.group = GroupCoordinator(
             controller_type=CTRL_Q2_FILTER,
             node_id=self.node_id,
@@ -74,6 +75,15 @@ class Q2Filter(Controller):
             if self.group.is_closed(client_id):
                 return
             matches = self._matches(article)
+
+            if matches and article.articleId is not None:
+                emitted = self.emitted_article_ids.setdefault(client_id, set())
+
+                if article.articleId in emitted:
+                    self.group.on_processed(client_id)
+                    return
+
+                emitted.add(article.articleId)
 
         image = self.image_client.download(article.imageUrl) if matches else None
         logger.debug(
@@ -124,7 +134,15 @@ class Q2Filter(Controller):
             msg_seq = self.next_msg_seq(client_id)
             self.out_mw.send(
                 internal.serialize_result_message(
-                    client_id, self.origin_node, msg_seq, ResultType.Q2, article.docId, part_id, flags, chunk
+                    client_id,
+                    self.origin_node,
+                    msg_seq,
+                    article.articleId,
+                    ResultType.Q2,
+                    article.docId,
+                    part_id,
+                    flags,
+                    chunk,
                 )
             )
 
