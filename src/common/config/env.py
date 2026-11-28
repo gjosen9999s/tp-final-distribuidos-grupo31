@@ -76,6 +76,14 @@ def log_dir():
     return _get("LOG_DIR", constants.LOG_DIR)
 
 
+def state_dir():
+    return _get("STATE_DIR", constants.STATE_DIR)
+
+
+def state_compact_every_batches():
+    return _get("STATE_COMPACT_EVERY_BATCHES", constants.STATE_COMPACT_EVERY_BATCHES, int)
+
+
 def results_queue():
     return _get("RESULTS_QUEUE", constants.QUERY_RESULTS)
 

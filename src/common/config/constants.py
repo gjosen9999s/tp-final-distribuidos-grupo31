@@ -41,4 +41,6 @@ CONTROL_KEY_Q5_ACCUMULATOR = "q5_accumulator"
 CONTROL_KEY_Q5_AVG_FILTER = "q5_average_filter"
 
 LOG_DIR = "/logs"
+STATE_DIR = "/state"
+STATE_COMPACT_EVERY_BATCHES = 50
 INPUT_FILE = "input.parquet"

@@ -368,6 +368,9 @@ services:
       CONTROLLER_COUNT: "2"
       ACCUMULATOR_COUNT: "2"
       NODE_ID: "0"
+      STATE_DIR: /state
+    volumes:
+      - q5_state:/state
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -389,6 +392,9 @@ services:
       CONTROLLER_COUNT: "2"
       ACCUMULATOR_COUNT: "2"
       NODE_ID: "1"
+      STATE_DIR: /state
+    volumes:
+      - q5_state:/state
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -409,6 +415,9 @@ services:
       CONTROLLER_COUNT: "1"
       COUNTER_COUNT: "2"
       NODE_ID: "0"
+      STATE_DIR: /state
+    volumes:
+      - q5_state:/state
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -429,6 +438,9 @@ services:
       CONTROLLER_COUNT: "1"
       COUNTER_COUNT: "2"
       NODE_ID: "1"
+      STATE_DIR: /state
+    volumes:
+      - q5_state:/state
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -451,6 +463,9 @@ services:
       COUNTER_COUNT: "2"
       ACCUMULATOR_COUNT: "2"
       NODE_ID: "0"
+      STATE_DIR: /state
+    volumes:
+      - q5_state:/state
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -662,3 +677,6 @@ services:
     depends_on:
       article_handler:
         condition: service_healthy
+
+volumes:
+  q5_state:
